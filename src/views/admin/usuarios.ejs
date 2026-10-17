@@ -1,0 +1,26 @@
+<% const titulo = t('usr.title') %>
+<%- include('../partials/header', { titulo }) %>
+<h1><%= t('usr.title') %></h1>
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+<form class="row" method="post" action="/admin/usuarios">
+  <input name="nombre" placeholder="<%= t('usr.name') %>" maxlength="60" required>
+  <input name="apellidos" placeholder="<%= t('reg.lastname') %>" maxlength="80" required>
+  <input type="email" name="email" placeholder="<%= t('usr.email') %>" required>
+  <input type="tel" name="telefono" placeholder="<%= t('reg.phoneIntl') %> (+57 …)" maxlength="30">
+  <input type="password" name="password" placeholder="<%= t('usr.password') %>" minlength="8" required>
+  <select name="rol" aria-label="<%= t('usr.role') %>">
+    <% roles.forEach(r => { %><option value="<%= r.clave %>"><%= rolNombre(r) %></option><% }) %>
+  </select>
+  <button class="btn"><%= t('usr.create') %></button>
+</form>
+<table>
+  <tr><th><%= t('usr.name') %></th><th><%= t('usr.email') %></th><th><%= t('usr.role') %></th><th><%= t('usr.status') %></th><th></th></tr>
+  <% usuarios.forEach(u => { %>
+    <tr>
+      <td><%= u.nombre %></td><td><%= u.email %></td><td><%= rolNombre({ clave: u.rol, nombre: u.rol_nombre, es_sistema: u.rol_sistema }) %></td>
+      <td><%= u.activo ? t('usr.active') : t('usr.inactive') %></td>
+      <td><% if (u.id !== user.id && puedeGestionar(u.rol)) { %><form method="post" action="/admin/usuarios/<%= u.id %>/toggle" class="inline"><button class="link"><%= u.activo ? t('usr.deactivate') : t('usr.activate') %></button></form><% } %></td>
+    </tr>
+  <% }) %>
+</table>
+<%- include('../partials/footer') %>

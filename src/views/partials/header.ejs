@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="<%= lang %>">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= typeof titulo !== 'undefined' ? titulo + ' · ' : '' %>DSB Transportes</title>
+  <meta name="theme-color" content="#0b3a6b">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" href="/img/icon-192.png">
+  <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="DSB">
+  <link rel="stylesheet" href="/css/style.css">
+  <script>
+    try { var t = localStorage.getItem('tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+<header class="nav" id="barra">
+  <a class="brand" href="/"><%- include('logo', { cls: 'logo-nav' }) %></a>
+  <% if (user) { %>
+    <a class="bell" href="/notificaciones" aria-label="<%= t('notif.title') %>" title="<%= t('notif.title') %>">
+      <span aria-hidden="true">🔔</span><span class="count" id="notif-badge" <%= sinLeer ? '' : 'hidden' %>><%= sinLeer %></span>
+    </a>
+  <% } %>
+  <button type="button" class="menu-toggle" id="menu-toggle" aria-label="<%= t('nav.menu') %>" aria-expanded="false">☰</button>
+  <nav>
+    <% if (user) { %>
+      <% if (can('panel.admin')) { %><a href="/admin"><%= t('nav.panel') %></a><% } %>
+      <% if (can('usuarios.gestionar')) { %><a href="/admin/usuarios"><%= t('nav.users') %></a><% } %>
+      <% if (can('reservas.ver_todas')) { %><a href="/admin/reservas"><%= t('nav.bookings') %></a><% } %>
+      <% if (can('tarifas.gestionar')) { %><a href="/admin/tarifas"><%= t('nav.tariffs') %></a><% } %>
+      <% if (can('divisas.gestionar')) { %><a href="/admin/divisas"><%= t('nav.currencies') %></a><% } %>
+      <% if (can('ajustes.gestionar')) { %><a href="/admin/ajustes"><%= t('nav.settings') %></a><% } %>
+      <% if (can('roles.gestionar')) { %><a href="/admin/roles"><%= t('nav.roles') %></a><% } %>
+      <% if (can('servicios.ver_asignados')) { %><a href="/empleado"><%= t('nav.myServices') %></a><% } %>
+      <% if (can('disponibilidad.gestionar')) { %><a href="/empleado/disponibilidad"><%= t('nav.availability') %></a><% } %>
+      <% if (can('reservas.ver_propias')) { %><a href="/cliente"><%= t('nav.myBookings') %></a><% } %>
+      <% if (can('reservas.crear_propia')) { %><a href="/cliente/reservar"><%= t('nav.book') %></a><% } %>
+      <form action="/logout" method="post" class="inline"><a href="/perfil" title="<%= t('nav.profile') %>"><%= user.nombre %></a> <button class="link"><%= t('nav.logout') %></button></form>
+    <% } else { %>
+      <a href="/#tours"><%= t('nav.tours') %></a><a href="/registro"><%= t('nav.register') %></a><a class="btn" href="/login"><%= t('nav.login') %></a>
+    <% } %>
+    <select class="lang-select" id="lang-select" aria-label="<%= t('lang.label') %>" data-next="<%= currentPath %>">
+      <% languages.forEach(l => { %><option value="<%= l.code %>" <%= l.code === lang ? 'selected' : '' %>><%= l.name %></option><% }) %>
+    </select>
+    <select class="lang-select" id="divisa-select" aria-label="<%= t('cur.label') %>" data-next="<%= currentPath %>">
+      <% listaDivisas.forEach(c => { %><option value="<%= c %>" <%= c === divisaVista ? 'selected' : '' %>><%= c %></option><% }) %>
+    </select>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="<%= t('theme.toggle') %>" title="<%= t('theme.title') %>">🌙</button>
+  </nav>
+</header>
+<script>
+  (function () {
+    var root = document.documentElement, btn = document.getElementById('theme-toggle');
+    function actual() {
+      return root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    }
+    function pintar() { btn.textContent = actual() === 'dark' ? '☀️' : '🌙'; }
+    btn.addEventListener('click', function () {
+      var nuevo = actual() === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = nuevo;
+      try { localStorage.setItem('tema', nuevo); } catch (e) {}
+      pintar();
+    });
+    pintar();
+
+    var div = document.getElementById('divisa-select');
+    div.addEventListener('change', function () {
+      location.href = '/divisa/' + div.value + '?next=' + encodeURIComponent(div.dataset.next);
+    });
+
+    var barra = document.getElementById('barra'), menu = document.getElementById('menu-toggle');
+    menu.addEventListener('click', function () {
+      var abierto = barra.classList.toggle('abierto');
+      menu.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+    });
+
+    var sel = document.getElementById('lang-select');
+    sel.addEventListener('change', function () {
+      location.href = '/lang/' + sel.value + '?next=' + encodeURIComponent(sel.dataset.next);
+    });
+  })();
+</script>
+<% if (user) { %><script src="/js/notificaciones.js" defer></script><% } %>
+<main class="container">

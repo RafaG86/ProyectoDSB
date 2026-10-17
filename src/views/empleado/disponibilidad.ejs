@@ -1,0 +1,30 @@
+<% const titulo = t('disp.title') %>
+<%- include('../partials/header', { titulo }) %>
+<h1><%= t('disp.title') %></h1>
+<p class="muted"><%= t('disp.hint') %></p>
+<% if (ok) { %><p class="ok" role="status"><%= ok %></p><% } %>
+<% if (aviso) { %><p class="error" role="alert"><%= aviso %></p><% } %>
+<% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+
+<form class="form" method="post" action="/empleado/disponibilidad" style="max-width:none; margin-bottom:24px">
+  <label><%= t('disp.from') %> <input type="date" name="desde" min="<%= hoy %>" required></label>
+  <label><%= t('disp.to') %> <input type="date" name="hasta" min="<%= hoy %>"></label>
+  <label><%= t('disp.reason') %> <input name="motivo" maxlength="200"></label>
+  <button class="btn"><%= t('disp.add') %></button>
+</form>
+
+<h2><%= t('disp.list') %></h2>
+<div class="table-wrap">
+<table>
+  <tr><th><%= t('disp.from') %></th><th><%= t('disp.to') %></th><th><%= t('disp.reason') %></th><th></th></tr>
+  <% rangos.forEach(g => { %>
+    <tr>
+      <td><%= g.desde %></td><td><%= g.hasta %></td><td><%= g.motivo || '—' %></td>
+      <td><form method="post" action="/empleado/disponibilidad/<%= g.id %>/eliminar" class="inline"><button class="link"><%= t('disp.remove') %></button></form></td>
+    </tr>
+  <% }) %>
+  <% if (!rangos.length) { %><tr><td colspan="4" class="muted"><%= t('disp.none') %></td></tr><% } %>
+</table>
+</div>
+<p class="actions"><a href="/empleado"><%= t('drv.back') %></a></p>
+<%- include('../partials/footer') %>

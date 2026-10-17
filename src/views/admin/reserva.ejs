@@ -1,0 +1,245 @@
+<% const titulo = t('cli.detail') + ' #' + r.id %>
+<% const editar = can('reservas.gestionar') && abierta %>
+<% const cur = r.moneda || 'USD' %>
+<%- include('../partials/header', { titulo }) %>
+<div class="head-row">
+  <h1><%= t('cli.detail') %> #<%= r.id %></h1>
+  <span class="badge est-<%= r.estado %>"><%= t('est.' + r.estado) %></span>
+</div>
+<% if (ok) { %><p class="ok" role="status"><%= ok %></p><% } %>
+<% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+
+<div class="cols">
+  <section class="card">
+    <h2><%= t('sla.detail') %></h2>
+    <% const claseResp = { ok: 'est-completada', tarde: 'est-pendiente', vencido: 'est-rechazada', esperando: 'est-confirmada' } %>
+    <% const clasePlazo = { ok: 'est-completada', urgente: 'est-pendiente', vencido: 'est-rechazada', confirmada: 'est-confirmada', cerrada: 'est-cancelada' } %>
+    <dl class="detail">
+      <dt><%= t('sla.received') %></dt><dd><%= bogota(r.creado_en) %></dd>
+      <dt><%= t('sla.firstResponse') %></dt>
+      <dd>
+        <% if (tiempos.respondido) { %>
+          <%= bogota(r.primera_respuesta_en) %>
+          <span class="badge <%= claseResp[tiempos.estadoRespuesta] %>"><%= duracion(tiempos.espera) %></span>
+        <% } else { %>
+          <span class="badge <%= claseResp[tiempos.estadoRespuesta] %>"><%= t('sla.waiting').replace('{t}', duracion(tiempos.espera)) %></span>
+        <% } %>
+        <br><small class="muted"><%= t('sla.target').replace('{t}', duracion(tiempos.objetivo)) %></small>
+      </dd>
+      <dt><%= t('sla.pickup') %></dt><dd><%= r.fecha %> <%= r.hora || '' %> <small class="muted">(<%= t('notif.bogota') %>)</small></dd>
+      <dt><%= t('sla.confirmBy').replace('{h}', tiempos.anticipacionH) %></dt>
+      <dd>
+        <%= bogota(tiempos.limite) %>
+        <% if (tiempos.estadoPlazo === 'confirmada') { %>
+          <span class="badge est-confirmada"><%= t('sla.confirmedAt').replace('{t}', r.confirmada_en ? bogota(r.confirmada_en) : '—') %></span>
+        <% } else if (tiempos.estadoPlazo === 'cerrada') { %>
+          <span class="badge est-cancelada">—</span>
+        <% } else { %>
+          <span class="badge <%= clasePlazo[tiempos.estadoPlazo] %>"><%= tiempos.restante < 0 ? t('sla.expired') : t('sla.remaining').replace('{t}', duracion(tiempos.restante)) %></span>
+        <% } %>
+      </dd>
+    </dl>
+    <% if (tiempos.estadoPlazo === 'vencido') { %><p class="error"><%= t('sla.expiredHelp').replace('{h}', tiempos.anticipacionH) %></p><% } %>
+  </section>
+
+  <section class="card">
+    <h2><%= t('req.title') %></h2>
+    <dl class="detail">
+      <dt><%= t('bk.client') %></dt><dd><%= r.cliente %></dd>
+      <dt><%= t('usr.email') %></dt><dd><%= r.cliente_email %></dd>
+      <dt><%= t('reg.phone') %></dt><dd><%= clienteTel || '—' %></dd>
+      <dt><%= t('req.country') %></dt><dd><%= paisNombre(r.cliente_pais) %></dd>
+      <dt><%= t('req.language') %></dt><dd><%= (languages.find(l => l.code === r.cliente_idioma) || {}).name || '—' %></dd>
+      <dt><%= t('cli.origin') %></dt><dd><%= r.origen %></dd>
+      <dt><%= t('svc.type') %></dt><dd><%= r.tipo === 'tour' ? r.tour : t('svc.special') %></dd>
+      <dt><%= t('cli.pickup') %></dt><dd><%= r.punto_recogida || '—' %></dd>
+      <dt><%= t('bk.destination') %></dt><dd><%= r.destino_final %></dd>
+      <dt><%= t('bk.date') %></dt><dd><%= r.fecha %><%= r.hora ? ' · ' + r.hora : '' %></dd>
+      <dt><%= t('cli.pax') %></dt><dd><%= r.pasajeros %></dd>
+      <dt><%= t('cli.hasPets') %></dt><dd><%= r.lleva_mascotas ? t('cli.yes') + ' — ' + r.mascotas_detalle : t('cli.no') %></dd>
+      <dt><%= t('cli.hasKids') %></dt><dd><%= r.lleva_ninos ? t('cli.yes') + ' — ' + r.ninos_detalle : t('cli.no') %></dd>
+      <dt><%= t('quo.requested') %></dt><dd><%= r.moneda_solicitada || '—' %></dd>
+      <% if (r.notas) { %><dt><%= t('cli.notes') %></dt><dd><%= r.notas %></dd><% } %>
+      <dt><%= t('req.created') %></dt><dd><%= r.creado_en %> UTC</dd>
+    </dl>
+  </section>
+
+  <section class="card">
+    <h2><%= t('quo.title') %></h2>
+    <% if (cot) { %>
+      <dl class="detail">
+        <dt><%= t('quo.transport') %></dt>
+        <dd><%= money(cot.transporte, cur) %> <span class="muted">(<%= r.km %> km × <%= money(r.precio_km, cur, true) %> — <%= r.tarifa_nombre %><%= cot.minimoAplicado ? ', ' + t('quo.minApplied') : '' %><%= r.tarifa_moneda && r.tarifa_moneda !== cur ? ', ' + t('quo.convertedFrom') + ' ' + r.tarifa_moneda : '' %>)</span></dd>
+        <dt><%= t('quo.tolls') %></dt><dd><%= money(r.peajes, cur) %></dd>
+        <dt><%= t('quo.perdiem') %></dt><dd><%= money(r.viaticos, cur) %></dd>
+        <dt><strong><%= t('quo.total') %></strong></dt><dd><strong><%= money(r.total, cur) %></strong> <span class="muted"><%= aprox(r.total, cur) %></span></dd>
+      </dl>
+    <% } else { %>
+      <p class="muted"><%= t('quo.notYet') %></p>
+      <% if (r.tipo === 'tour' && r.tour_precio != null) { %><p class="muted"><%= t('cli.price') %> (<%= r.tour %>): <%= money(r.tour_precio, r.tour_moneda) %></p><% } %>
+    <% } %>
+
+    <% if (editar) { %>
+      <% if (!tarifas.length) { %>
+        <p class="error"><%= t('quo.noTarifas') %> <% if (can('tarifas.gestionar')) { %><a href="/admin/tarifas"><%= t('nav.tariffs') %></a><% } %></p>
+      <% } else { %>
+        <form class="form" method="post" action="/admin/reservas/<%= r.id %>/cotizar" id="form-cotizar" style="margin:16px 0 0; max-width:none">
+          <label><%= t('quo.currency') %>
+            <select name="moneda" id="moneda">
+              <% listaDivisas.forEach(c => { %><option value="<%= c %>" <%= c === monedaCot ? 'selected' : '' %>><%= c %> — <%= t('cur.' + c) %></option><% }) %>
+            </select>
+          </label>
+          <label><%= t('quo.tarifa') %>
+            <%# Cada tarifa se muestra ya convertida a la moneda de la cotización (y el script la reconvierte si se cambia la moneda). %>
+            <% const aMoneda = (n, de) => n / divisas[de].tasa * divisas[monedaCot].tasa %>
+            <select name="tarifa_id" id="tarifa" required>
+              <% tarifas.forEach(tf => { %>
+                <option value="<%= tf.id %>" data-nombre="<%= tf.nombre %>" data-precio="<%= tf.precio_km %>" data-min="<%= tf.tarifa_minima %>" data-moneda="<%= tf.moneda %>"
+                  <%= (r.tarifa_nombre === tf.nombre) ? 'selected' : '' %>><%= tf.nombre %> — <%= money(aMoneda(tf.precio_km, tf.moneda), monedaCot, true) %>/km<%= tf.tarifa_minima > 0 ? ' · min ' + money(aMoneda(tf.tarifa_minima, tf.moneda), monedaCot) : '' %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label><%= t('quo.km') %> <input type="number" name="km" id="km" min="0.1" max="20000" step="0.1" value="<%= r.km || '' %>" required></label>
+          <label><%= t('quo.tolls') %> (<span class="cur-code"><%= monedaCot %></span>) <input type="number" name="peajes" id="peajes" min="0" step="any" value="<%= r.peajes ?? 0 %>"></label>
+          <label><%= t('quo.perdiem') %> (<span class="cur-code"><%= monedaCot %></span>) <input type="number" name="viaticos" id="viaticos" min="0" step="any" value="<%= r.viaticos ?? 0 %>"></label>
+          <p class="preview" aria-live="polite"><%= t('quo.total') %>: <strong id="total-prev">—</strong></p>
+          <p class="muted" id="conv-note"></p>
+          <button class="btn"><%= t('quo.save') %></button>
+        </form>
+        <script>
+          (function () {
+            var DIV = <%- JSON.stringify(Object.fromEntries(Object.values(divisas).map(function (d) { return [d.codigo, { tasa: d.tasa, decimales: d.decimales }]; }))).replace(/</g, '\\u003c') %>;
+            var LOCALE = <%- JSON.stringify(localeJs) %>;
+            var CONVERTIDA = <%- JSON.stringify(t('quo.convertedFrom')) %>;
+            var $ = function (id) { return document.getElementById(id); };
+            function rd(n, dec) { var f = Math.pow(10, dec); return Math.round((n + Number.EPSILON) * f) / f; }
+            function fmt(n, code) {
+              return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: code, currencyDisplay: 'code',
+                minimumFractionDigits: DIV[code].decimales, maximumFractionDigits: DIV[code].decimales }).format(n);
+            }
+            // Precio por km: con más decimales (EUR 1,104) para que se vea el valor real.
+            function fmtKm(n, code) {
+              var dec = DIV[code].decimales;
+              return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: code, currencyDisplay: 'code',
+                minimumFractionDigits: dec, maximumFractionDigits: dec === 0 ? 2 : 4 }).format(n);
+            }
+            // El selector de tarifas siempre se muestra en la moneda elegida para la cotización.
+            function etiquetas() {
+              var code = $('moneda').value;
+              Array.prototype.forEach.call($('tarifa').options, function (o) {
+                var f = DIV[code].tasa / DIV[o.dataset.moneda].tasa, min = parseFloat(o.dataset.min) * f;
+                o.textContent = o.dataset.nombre + ' — ' + fmtKm(parseFloat(o.dataset.precio) * f, code) + '/km'
+                  + (min > 0 ? ' · min ' + fmt(rd(min, DIV[code].decimales), code) : '');
+              });
+            }
+            function calcular() {
+              etiquetas();
+              var q = DIV[$('moneda').value], op = $('tarifa').selectedOptions[0];
+              document.querySelectorAll('.cur-code').forEach(function (e) { e.textContent = $('moneda').value; });
+              if (!op) return;
+              var origen = op.dataset.moneda;
+              $('conv-note').textContent = origen !== $('moneda').value ? CONVERTIDA + ' ' + origen + ' (1 USD = ' + q.tasa + ' ' + $('moneda').value + ')' : '';
+              var km = parseFloat($('km').value), pe = parseFloat($('peajes').value) || 0, vi = parseFloat($('viaticos').value) || 0;
+              if (!(km > 0)) { $('total-prev').textContent = '—'; return; }
+              var factor = q.tasa / DIV[origen].tasa;
+              var precio = rd(parseFloat(op.dataset.precio) * factor, 6), min = rd(parseFloat(op.dataset.min) * factor, 6);
+              var transporte = Math.max(rd(km * precio, q.decimales), rd(min, q.decimales));
+              $('total-prev').textContent = fmt(rd(transporte + rd(pe, q.decimales) + rd(vi, q.decimales), q.decimales), $('moneda').value);
+            }
+            ['moneda', 'tarifa', 'km', 'peajes', 'viaticos'].forEach(function (id) { $(id).addEventListener('input', calcular); });
+            calcular();
+          })();
+        </script>
+      <% } %>
+    <% } %>
+  </section>
+
+  <% if (r.autorizacion !== 'no_requiere') { %>
+  <section class="card">
+    <h2><%= t('aut.title') %></h2>
+    <p><span class="badge <%= { pendiente: 'est-pendiente', autorizada: 'est-completada', rechazada: 'est-rechazada' }[r.autorizacion] %>"><%= t('aut.' + r.autorizacion) %></span>
+      <% if (r.autorizado_en) { %><span class="muted"> · <%= r.autorizado_en %> UTC</span><% } %></p>
+    <% if (r.autorizacion_nota) { %><p><strong><%= t('aut.noteLabel') %>:</strong> <%= r.autorizacion_nota %></p><% } %>
+    <% if (can('reservas.gestionar') && r.estado === 'pendiente') { %>
+      <form class="form" method="post" action="/admin/reservas/<%= r.id %>/autorizacion" style="max-width:none">
+        <fieldset class="perms">
+          <legend><%= t('aut.decision') %></legend>
+          <label class="check"><input type="radio" name="decision" value="autorizada" <%= r.autorizacion !== 'rechazada' ? 'checked' : '' %>> <%= t('aut.authorize') %></label>
+          <label class="check"><input type="radio" name="decision" value="rechazada" <%= r.autorizacion === 'rechazada' ? 'checked' : '' %>> <%= t('aut.reject') %></label>
+        </fieldset>
+        <label><%= t('aut.note') %> <textarea name="nota" rows="2" maxlength="500"><%= r.autorizacion_nota || '' %></textarea></label>
+        <button class="btn"><%= t('aut.save') %></button>
+      </form>
+    <% } %>
+  </section>
+  <% } %>
+
+  <section class="card">
+    <h2><%= t('assign.title') %></h2>
+    <% const claseCond = { pendiente: 'est-pendiente', aceptada: 'est-completada', rechazada: 'est-rechazada', sin_asignar: 'est-cancelada' } %>
+    <p>
+      <span class="badge <%= claseCond[r.conductor_estado] %>"><%= t('cond.' + r.conductor_estado) %></span>
+      <% if (r.conductor_asignado_en) { %><small class="muted"> · <%= t('assign.asked').replace('{t}', bogota(r.conductor_asignado_en)) %></small><% } %>
+      <% if (r.conductor_respondido_en) { %><small class="muted"> · <%= t('assign.responded').replace('{t}', bogota(r.conductor_respondido_en)) %></small><% } %>
+    </p>
+    <% if (r.conductor_nota) { %><p><strong><%= t('assign.note') %>:</strong> <%= r.conductor_nota %></p><% } %>
+    <% if (editar) { %>
+      <form class="form" method="post" action="/admin/reservas/<%= r.id %>/asignar" style="max-width:none">
+        <label><%= t('assign.driver') %>
+          <% if (r.estado === 'confirmada') { %>
+            <input type="hidden" name="empleado_id" value="<%= r.empleado_id || '' %>">
+            <input value="<%= r.empleado || '—' %>" disabled>
+            <small class="muted"><%= t('assign.lockedConfirmed') %></small>
+          <% } else { %>
+            <select name="empleado_id">
+              <option value=""><%= t('assign.none') %></option>
+              <% conductores.forEach(e => { const actual = r.empleado_id === e.id; %>
+                <option value="<%= e.id %>" <%= actual ? 'selected' : '' %> <%= (!e.disp.libre && !actual) ? 'disabled' : '' %>>
+                  <%= e.nombre %> — <%= e.disp.libre ? t('assign.available') : (e.disp.motivo === 'ocupado' ? t('assign.busy').replace('{id}', e.disp.reservaId) : t('assign.off').replace('{desde}', e.disp.desde).replace('{hasta}', e.disp.hasta)) %>
+                </option>
+              <% }) %>
+            </select>
+            <small class="muted"><%= t('assign.driverHelp') %></small>
+          <% } %>
+        </label>
+        <label><%= t('assign.vehicle') %>
+          <select name="vehiculo_id">
+            <option value=""><%= t('assign.none') %></option>
+            <% vehiculos.forEach(v => { %><option value="<%= v.id %>" <%= r.vehiculo_id === v.id ? 'selected' : '' %>><%= v.placa %> · <%= v.tipo %> · <%= v.capacidad %> <%= t('assign.seats') %></option><% }) %>
+          </select>
+        </label>
+        <button class="btn"><%= t('assign.save') %></button>
+      </form>
+    <% } else { %>
+      <dl class="detail">
+        <dt><%= t('assign.driver') %></dt><dd><%= r.empleado || t('cli.notAssigned') %></dd>
+        <dt><%= t('assign.vehicle') %></dt><dd><%= r.placa ? r.placa + ' · ' + r.vehiculo_tipo : t('cli.notAssigned') %></dd>
+      </dl>
+    <% } %>
+  </section>
+
+  <% if (can('reservas.gestionar') && siguientes.length) { %>
+  <section class="card">
+    <h2><%= t('state.title') %></h2>
+    <% if (r.estado === 'pendiente') { %>
+      <h3 class="chk-title"><%= t('chk.title') %></h3>
+      <ul class="check-list">
+        <% requisitos.forEach(q => { %><li class="<%= q.ok ? 'ok' : 'falta' %>"><span aria-hidden="true"><%= q.ok ? '✔' : '✖' %></span> <%= t('chk.' + q.clave).replace('{h}', q.horas) %></li><% }) %>
+      </ul>
+    <% } %>
+    <div class="actions" style="flex-wrap:wrap">
+      <% siguientes.forEach(s => { %>
+        <form method="post" action="/admin/reservas/<%= r.id %>/estado" class="inline"
+          <% if (s === 'cancelada') { %>onsubmit="return confirm(<%= JSON.stringify(t('adm.cancelConfirm')) %>)"<% } %>>
+          <input type="hidden" name="estado" value="<%= s %>">
+          <button class="btn <%= s === 'cancelada' ? 'danger' : '' %>"><%= t('act.' + s) %></button>
+        </form>
+      <% }) %>
+    </div>
+    <% if (r.total == null && siguientes.includes('confirmada')) { %><p class="muted"><%= t('res.errNeedQuote') %></p><% } %>
+  </section>
+  <% } %>
+</div>
+
+<p class="actions"><a href="/admin/reservas"><%= t('cli.back') %></a></p>
+<%- include('../partials/footer') %>

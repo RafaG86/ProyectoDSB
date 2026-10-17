@@ -1,0 +1,19 @@
+<% const titulo = t('tar.edit') %>
+<%- include('../partials/header', { titulo }) %>
+<form class="form" method="post" action="/admin/tarifas/<%= tarifa.id %>">
+  <h1><%= t('tar.edit') %></h1>
+  <% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+  <label><%= t('tar.name') %> <input name="nombre" value="<%= tarifa.nombre %>" maxlength="80" required></label>
+  <label><%= t('cur.label') %>
+    <select name="moneda">
+      <% listaDivisas.forEach(c => { %><option value="<%= c %>" <%= c === tarifa.moneda ? 'selected' : '' %>><%= c %> — <%= t('cur.' + c) %></option><% }) %>
+    </select>
+  </label>
+  <label><%= t('tar.perKm') %> <input type="number" name="precio_km" value="<%= tarifa.precio_km %>" min="0" step="any" required></label>
+  <label><%= t('tar.min') %> <input type="number" name="tarifa_minima" value="<%= tarifa.tarifa_minima %>" min="0" step="any"></label>
+  <label class="check"><input type="checkbox" name="activo" value="1" <%= tarifa.activo ? 'checked' : '' %>> <%= t('usr.active') %></label>
+  <p class="muted"><%= t('tar.editHint') %></p>
+  <button class="btn"><%= t('roles.save') %></button>
+  <a href="/admin/tarifas"><%= t('roles.back') %></a>
+</form>
+<%- include('../partials/footer') %>

@@ -1,0 +1,28 @@
+<% const titulo = rolNombre(rol) %>
+<% const bloqueado = rol.clave === 'admin' %>
+<%- include('../partials/header', { titulo }) %>
+<h1><%= rolNombre(rol) %></h1>
+<% if (bloqueado) { %><p class="muted"><%= t('roles.locked') %></p><% } else { %><p class="muted"><%= t('roles.hint') %></p><% } %>
+<form class="form" method="post" action="/admin/roles/<%= rol.id %>">
+  <% if (!rol.es_sistema) { %>
+    <label><%= t('roles.name') %> <input name="nombre" value="<%= rol.nombre %>" required></label>
+    <label><%= t('roles.panel') %>
+      <select name="panel">
+        <% paneles.forEach(p => { %><option value="<%= p %>" <%= p === rol.panel ? 'selected' : '' %>><%= t('roles.panel.' + p) %></option><% }) %>
+      </select>
+    </label>
+  <% } %>
+  <fieldset class="perms">
+    <legend><%= t('roles.perms') %></legend>
+    <% permisos.forEach(p => { %>
+      <label class="check">
+        <input type="checkbox" name="permisos" value="<%= p %>"
+          <%= actuales.has(p) ? 'checked' : '' %> <%= (bloqueado || !can(p)) ? 'disabled' : '' %>>
+        <%= t('perm.' + p) %>
+      </label>
+    <% }) %>
+  </fieldset>
+  <% if (!bloqueado) { %><button class="btn"><%= t('roles.save') %></button><% } %>
+  <a href="/admin/roles"><%= t('roles.back') %></a>
+</form>
+<%- include('../partials/footer') %>

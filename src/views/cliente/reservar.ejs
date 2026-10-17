@@ -1,0 +1,89 @@
+<% const titulo = t('cli.new') %>
+<% const v = valores || {} %>
+<%- include('../partials/header', { titulo }) %>
+<form class="form" method="post" action="/cliente/reservar" id="form-reserva">
+  <h1><%= t('cli.new') %></h1>
+  <% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+
+  <label><%= t('cli.origin') %>
+    <input value="<%= origen %>" disabled>
+    <small class="muted"><%= t('cli.originOnly') %></small>
+  </label>
+
+  <fieldset class="perms">
+    <legend><%= t('svc.type') %></legend>
+    <label class="check"><input type="radio" name="tipo" value="tour" <%= v.tipo !== 'especial' ? 'checked' : '' %>> <%= t('svc.tour') %></label>
+    <label class="check"><input type="radio" name="tipo" value="especial" <%= v.tipo === 'especial' ? 'checked' : '' %>> <%= t('svc.special') %></label>
+  </fieldset>
+
+  <div id="bloque-tour">
+    <label><%= t('cli.tourPick') %>
+      <select name="tour_id">
+        <% tours.forEach(tour => { %>
+          <option value="<%= tour.id %>" <%= String(v.tourElegido) === String(tour.id) ? 'selected' : '' %>><%= tour.nombre %> — <%= tour.destino %> · <%= precioLista(tour.precio, tour.moneda) %></option>
+        <% }) %>
+      </select>
+    </label>
+  </div>
+
+  <div id="bloque-especial" hidden>
+    <label><%= t('cli.dest') %> <input name="destino" maxlength="200" value="<%= v.destino || '' %>"></label>
+    <p class="muted"><%= t('cli.specialHint') %></p>
+  </div>
+
+  <p class="muted"><%= t('cli.leadHint').replace('{horas}', horas) %></p>
+  <label><%= t('cli.pickupDate') %> <input type="date" name="fecha" min="<%= hoy %>" value="<%= v.fecha || '' %>" required></label>
+  <label><%= t('cli.pickupTime') %> <input type="time" name="hora" value="<%= v.hora || '' %>" required></label>
+  <label><%= t('cli.pickup') %> <input name="punto_recogida" maxlength="200" value="<%= v.punto_recogida || '' %>" required></label>
+  <label><%= t('cli.pax') %> <input type="number" name="pasajeros" min="1" max="60" value="<%= v.pasajeros || 1 %>" required>
+    <small class="muted"><%= t('cli.paxHint') %></small>
+  </label>
+
+  <fieldset class="perms">
+    <legend><%= t('cli.special') %></legend>
+    <label class="check"><input type="checkbox" name="lleva_mascotas" value="1" id="chk-mascotas" <%= v.lleva_mascotas ? 'checked' : '' %>> <%= t('cli.pets') %></label>
+    <div id="bloque-mascotas" hidden>
+      <label><%= t('cli.petsDetail') %> <textarea name="mascotas_detalle" id="mascotas-detalle" rows="3" maxlength="500"><%= v.mascotas_detalle || '' %></textarea></label>
+      <small class="muted"><%= t('cli.authHint') %></small>
+    </div>
+    <label class="check"><input type="checkbox" name="lleva_ninos" value="1" id="chk-ninos" <%= v.lleva_ninos ? 'checked' : '' %>> <%= t('cli.kids') %></label>
+    <div id="bloque-ninos" hidden>
+      <label><%= t('cli.kidsDetail') %> <textarea name="ninos_detalle" id="ninos-detalle" rows="3" maxlength="500"><%= v.ninos_detalle || '' %></textarea></label>
+      <small class="muted"><%= t('cli.authHint') %></small>
+    </div>
+  </fieldset>
+
+  <label><%= t('cli.currency') %>
+    <select name="moneda">
+      <% listaDivisas.forEach(c => { %><option value="<%= c %>" <%= (v.moneda || divisaVista) === c ? 'selected' : '' %>><%= c %> — <%= t('cur.' + c) %></option><% }) %>
+    </select>
+  </label>
+  <label><%= t('cli.notes') %> <textarea name="notas" rows="3" maxlength="500"><%= v.notas || '' %></textarea></label>
+  <button class="btn"><%= t('cli.submit') %></button>
+  <a href="/cliente"><%= t('cli.back') %></a>
+</form>
+<script>
+  (function () {
+    var form = document.getElementById('form-reserva');
+    var tour = document.getElementById('bloque-tour'), esp = document.getElementById('bloque-especial');
+    function actualizar() {
+      var especial = form.tipo.value === 'especial';
+      tour.hidden = especial; esp.hidden = !especial;
+      tour.querySelector('select').disabled = especial;
+      esp.querySelector('input').disabled = !especial;
+      esp.querySelector('input').required = especial;
+    }
+    form.querySelectorAll('input[name="tipo"]').forEach(function (r) { r.addEventListener('change', actualizar); });
+    actualizar();
+
+    // Mascotas / niños: al marcarlos aparece el cuadro de detalle y pasa a ser obligatorio.
+    function condicion(chkId, bloqueId, textoId) {
+      var chk = document.getElementById(chkId), bloque = document.getElementById(bloqueId), texto = document.getElementById(textoId);
+      function pintar() { bloque.hidden = !chk.checked; texto.required = chk.checked; }
+      chk.addEventListener('change', pintar); pintar();
+    }
+    condicion('chk-mascotas', 'bloque-mascotas', 'mascotas-detalle');
+    condicion('chk-ninos', 'bloque-ninos', 'ninos-detalle');
+  })();
+</script>
+<%- include('../partials/footer') %>

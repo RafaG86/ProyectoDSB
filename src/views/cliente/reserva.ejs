@@ -1,0 +1,54 @@
+<% const titulo = t('cli.detail') + ' #' + r.id %>
+<% const cur = r.moneda || 'USD' %>
+<%- include('../partials/header', { titulo }) %>
+<div class="head-row">
+  <h1><%= t('cli.detail') %> #<%= r.id %></h1>
+  <span class="badge est-<%= r.estado %>"><%= t('est.' + r.estado) %></span>
+</div>
+<% if (ok) { %><p class="ok" role="status"><%= ok %></p><% } %>
+
+<div class="card">
+  <dl class="detail">
+    <dt><%= t('cli.origin') %></dt><dd><%= r.origen %></dd>
+    <dt><%= t('svc.type') %></dt><dd><%= r.tipo === 'tour' ? r.tour_nombre : t('svc.special') %></dd>
+    <dt><%= t('bk.destination') %></dt><dd><%= r.destino_final %></dd>
+    <dt><%= t('bk.date') %></dt><dd><%= r.fecha %><%= r.hora ? ' · ' + r.hora : '' %></dd>
+    <dt><%= t('cli.pickup') %></dt><dd><%= r.punto_recogida || '—' %></dd>
+    <dt><%= t('cli.pax') %></dt><dd><%= r.pasajeros %></dd>
+    <dt><%= t('cli.hasPets') %></dt><dd><%= r.lleva_mascotas ? t('cli.yes') + ' — ' + r.mascotas_detalle : t('cli.no') %></dd>
+    <dt><%= t('cli.hasKids') %></dt><dd><%= r.lleva_ninos ? t('cli.yes') + ' — ' + r.ninos_detalle : t('cli.no') %></dd>
+    <% if (cot) { %>
+      <dt><%= t('quo.transport') %></dt><dd><%= money(cot.transporte, cur) %> <span class="muted">(<%= r.km %> km)</span></dd>
+      <dt><%= t('quo.tolls') %></dt><dd><%= money(r.peajes, cur) %></dd>
+      <dt><%= t('quo.perdiem') %></dt><dd><%= money(r.viaticos, cur) %></dd>
+      <dt><strong><%= t('quo.total') %></strong></dt><dd><strong><%= money(r.total, cur) %></strong> <span class="muted"><%= aprox(r.total, cur) %></span></dd>
+    <% } else if (r.tipo === 'tour') { %>
+      <dt><%= t('cli.price') %></dt><dd><%= precioLista(r.tour_precio, r.tour_moneda) %> <span class="muted">· <%= t('cli.quotePending') %></span></dd>
+    <% } else { %>
+      <dt><%= t('quo.total') %></dt><dd><%= t('cli.priceQuote') %></dd>
+    <% } %>
+    <dt><%= t('cli.assigned') %></dt><dd><%= (r.empleado && r.conductor_estado === 'aceptada') ? r.empleado : t('cli.notAssigned') %></dd>
+    <dt><%= t('cli.vehicle') %></dt><dd><%= r.placa ? r.placa + ' (' + r.vehiculo_tipo + ')' : t('cli.notAssigned') %></dd>
+    <% if (r.notas) { %><dt><%= t('cli.notes') %></dt><dd><%= r.notas %></dd><% } %>
+  </dl>
+</div>
+
+<% if (r.autorizacion !== 'no_requiere') { %>
+<section class="card" style="margin-top:16px">
+  <h2><%= t('cli.authTitle') %></h2>
+  <p><span class="badge <%= { pendiente: 'est-pendiente', autorizada: 'est-completada', rechazada: 'est-rechazada' }[r.autorizacion] %>"><%= t('aut.' + r.autorizacion) %></span></p>
+  <p class="muted"><%= t('aut.' + r.autorizacion + '.msg') %></p>
+  <% if (r.autorizacion_nota) { %><p><strong><%= t('aut.noteLabel') %>:</strong> <%= r.autorizacion_nota %></p><% } %>
+</section>
+<% } %>
+
+<p class="actions">
+  <a href="/cliente"><%= t('cli.back') %></a>
+  <% if (cancelable && can('reservas.cancelar_propia')) { %>
+    <form method="post" action="/cliente/reservas/<%= r.id %>/cancelar" class="inline"
+          onsubmit="return confirm(<%= JSON.stringify(t('cli.cancelConfirm')) %>)">
+      <button class="btn danger"><%= t('cli.cancel') %></button>
+    </form>
+  <% } %>
+</p>
+<%- include('../partials/footer') %>

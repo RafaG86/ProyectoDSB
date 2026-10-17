@@ -1,0 +1,32 @@
+<% const titulo = t('cli.title') %>
+<%- include('../partials/header', { titulo }) %>
+<div class="head-row">
+  <h1><%= t('cli.title') %></h1>
+  <% if (can('reservas.crear_propia')) { %><a class="btn" href="/cliente/reservar"><%= t('cli.new') %></a><% } %>
+</div>
+
+<div class="grid summary">
+  <div class="card stat"><span><%= resumen.proximos %></span><%= t('cli.sum.upcoming') %></div>
+  <div class="card stat"><span><%= resumen.pendientes %></span><%= t('cli.sum.pending') %></div>
+  <div class="card stat"><span><%= resumen.completados %></span><%= t('cli.sum.done') %></div>
+</div>
+
+<div class="table-wrap">
+<table>
+  <tr><th><%= t('bk.date') %></th><th><%= t('cli.time') %></th><th><%= t('svc.type') %></th><th><%= t('bk.destination') %></th><th><%= t('bk.pax') %></th><th><%= t('bk.total') %></th><th><%= t('bk.status') %></th><th></th></tr>
+  <% reservas.forEach(r => { %>
+    <tr>
+      <td><%= r.fecha %></td>
+      <td><%= r.hora || '—' %></td>
+      <td><%= r.tipo === 'tour' ? r.tour_nombre : t('svc.special') %></td>
+      <td><%= r.destino_final %></td>
+      <td><%= r.pasajeros %></td>
+      <td><%= r.total == null ? '—' : money(r.total, r.moneda || 'USD') %></td>
+      <td><span class="badge est-<%= r.estado %>"><%= t('est.' + r.estado) %></span></td>
+      <td><a href="/cliente/reservas/<%= r.id %>"><%= t('cli.view') %></a></td>
+    </tr>
+  <% }) %>
+  <% if (!reservas.length) { %><tr><td colspan="8" class="muted"><%= t('cli.none') %></td></tr><% } %>
+</table>
+</div>
+<%- include('../partials/footer') %>

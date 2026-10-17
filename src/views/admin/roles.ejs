@@ -1,0 +1,29 @@
+<% const titulo = t('roles.title') %>
+<%- include('../partials/header', { titulo }) %>
+<h1><%= t('roles.title') %></h1>
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+<form class="row" method="post" action="/admin/roles">
+  <input name="nombre" placeholder="<%= t('roles.name') %>" required>
+  <select name="panel" aria-label="<%= t('roles.panel') %>">
+    <% paneles.forEach(p => { %><option value="<%= p %>"><%= t('roles.panel.' + p) %></option><% }) %>
+  </select>
+  <button class="btn"><%= t('roles.create') %></button>
+</form>
+<table>
+  <tr><th><%= t('roles.name') %></th><th><%= t('roles.panel') %></th><th><%= t('roles.users') %></th><th><%= t('roles.perms') %></th><th></th></tr>
+  <% roles.forEach(r => { %>
+    <tr>
+      <td><%= rolNombre(r) %><% if (r.es_sistema) { %> <span class="muted">· <%= t('roles.system') %></span><% } %></td>
+      <td><%= t('roles.panel.' + r.panel) %></td>
+      <td><%= r.usuarios %></td>
+      <td><%= r.clave === 'admin' ? '∗' : r.permisos %></td>
+      <td>
+        <a href="/admin/roles/<%= r.id %>"><%= t('roles.edit') %></a>
+        <% if (!r.es_sistema && r.usuarios === 0) { %>
+          <form method="post" action="/admin/roles/<%= r.id %>/eliminar" class="inline"> · <button class="link"><%= t('roles.delete') %></button></form>
+        <% } %>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+<%- include('../partials/footer') %>

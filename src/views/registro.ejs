@@ -1,0 +1,18 @@
+<% const titulo = t('reg.pageTitle') %>
+<%- include('partials/header', { titulo }) %>
+<form class="form" method="post" action="/registro">
+  <%- include('partials/logo', { cls: 'logo-form' }) %>
+  <h1><%= t('reg.title') %></h1>
+  <% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+  <label><%= t('reg.name') %> <input name="nombre" value="<%= v.nombre || '' %>" maxlength="60" autocomplete="given-name" required></label>
+  <label><%= t('reg.lastname') %> <input name="apellidos" value="<%= v.apellidos || '' %>" maxlength="80" autocomplete="family-name" required></label>
+  <label><%= t('reg.email') %> <input type="email" name="email" value="<%= v.email || '' %>" maxlength="254" autocomplete="email" required></label>
+  <label><%= t('reg.phoneIntl') %>
+    <input type="tel" name="telefono" value="<%= v.telefono || '' %>" placeholder="+57 300 123 4567" maxlength="30" autocomplete="tel" required>
+    <small class="muted"><%= t('reg.phoneHint') %></small>
+  </label>
+  <label><%= t('reg.password') %> <input type="password" name="password" minlength="8" autocomplete="new-password" required></label>
+  <button class="btn"><%= t('reg.submit') %></button>
+  <p class="muted"><%= t('login.hasAccount') %> <a href="/login"><%= t('login.title') %></a></p>
+</form>
+<%- include('partials/footer') %>

@@ -1,0 +1,4 @@
+<%# Azul institucional sobre fondo claro; azul celeste sobre fondo oscuro (lo decide el CSS según el tema). Uso: include('partials/logo', { cls: 'logo-nav' }) %>
+<% const c = typeof cls !== 'undefined' ? cls : '' %>
+<img src="/img/logo.png" alt="DSB Transportes Especiales" class="<%= c %> logo-light">
+<img src="/img/logo-celeste.png" alt="" aria-hidden="true" class="<%= c %> logo-dark">

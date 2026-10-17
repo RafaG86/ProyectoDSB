@@ -1,0 +1,28 @@
+<% const titulo = t('prof.title') %>
+<%- include('partials/header', { titulo }) %>
+<h1><%= t('prof.title') %></h1>
+<% if (aviso) { %><p class="error" role="alert"><%= aviso %></p><% } %>
+<% if (ok) { %><p class="ok" role="status"><%= ok %></p><% } %>
+<% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+
+<form class="form" method="post" action="/perfil">
+  <h2><%= t('prof.data') %></h2>
+  <label><%= t('prof.email') %> <input value="<%= datos.email %>" disabled></label>
+  <label><%= t('reg.name') %> <input name="nombre" value="<%= datos.nombre %>" maxlength="60" required></label>
+  <label><%= t('reg.lastname') %> <input name="apellidos" value="<%= datos.apellidos %>" maxlength="80" required></label>
+  <label><%= t('reg.phoneIntl') %>
+    <input type="tel" name="telefono" value="<%= datos.telefono || '' %>" placeholder="+57 300 123 4567" maxlength="30" <%= user.panel === 'cliente' ? 'required' : '' %>>
+    <small class="muted"><%= t('reg.phoneHint') %></small>
+  </label>
+  <% if (pais) { %><p class="muted"><%= t('req.country') %>: <%= paisNombre(pais) %></p><% } %>
+  <button class="btn"><%= t('prof.save') %></button>
+</form>
+
+<form class="form" method="post" action="/perfil/password" style="margin-top:32px">
+  <h2><%= t('prof.passTitle') %></h2>
+  <label><%= t('prof.current') %> <input type="password" name="actual" autocomplete="current-password" required></label>
+  <label><%= t('prof.new') %> <input type="password" name="nueva" minlength="8" autocomplete="new-password" required></label>
+  <label><%= t('prof.confirm') %> <input type="password" name="confirmar" minlength="8" autocomplete="new-password" required></label>
+  <button class="btn"><%= t('prof.change') %></button>
+</form>
+<%- include('partials/footer') %>

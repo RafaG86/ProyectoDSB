@@ -1,0 +1,32 @@
+<% const titulo = t('div.title') %>
+<%- include('../partials/header', { titulo }) %>
+<h1><%= t('div.title') %></h1>
+<p class="muted"><%= t('div.hint') %></p>
+<% if (ok) { %><p class="ok" role="status"><%= ok %></p><% } %>
+<% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+
+<form method="post" action="/admin/divisas">
+  <div class="table-wrap">
+  <table>
+    <tr><th><%= t('cur.label') %></th><th><%= t('div.rate') %></th><th><%= t('div.reverse') %></th><th><%= t('div.updated') %></th></tr>
+    <% orden.forEach(c => { const d = divisas[c]; %>
+      <tr>
+        <td><strong><%= c %></strong> <span class="muted">· <%= t('cur.' + c) %><%= c === 'USD' ? ' · ' + t('div.base') : '' %></span></td>
+        <td>
+          1 USD =
+          <% if (c === 'USD') { %>
+            <input value="1" disabled size="10" aria-label="<%= c %>">
+          <% } else { %>
+            <input type="number" name="tasa_<%= c %>" value="<%= d.tasa %>" min="0" step="any" required size="12" aria-label="<%= t('div.rate') %> <%= c %>">
+          <% } %>
+          <%= c %>
+        </td>
+        <td class="muted">1 <%= c %> = <%= (1 / d.tasa).toLocaleString('en-US', { maximumSignificantDigits: 6 }) %> USD</td>
+        <td class="muted"><%= c === 'USD' ? '—' : d.actualizada_en + ' UTC' %></td>
+      </tr>
+    <% }) %>
+  </table>
+  </div>
+  <p><button class="btn"><%= t('div.save') %></button></p>
+</form>
+<%- include('../partials/footer') %>

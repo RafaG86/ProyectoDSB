@@ -1,0 +1,13 @@
+<% const titulo = t('login.title') %>
+<%- include('partials/header', { titulo }) %>
+<form class="form" method="post" action="/login">
+  <%- include('partials/logo', { cls: 'logo-form' }) %>
+  <h1><%= t('login.title') %></h1>
+  <% if (ok) { %><p class="ok" role="status"><%= ok %></p><% } %>
+  <% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+  <label><%= t('login.email') %> <input type="email" name="email" autocomplete="username" required></label>
+  <label><%= t('login.password') %> <input type="password" name="password" autocomplete="current-password" required></label>
+  <button class="btn"><%= t('login.submit') %></button>
+  <p class="muted"><%= t('login.noAccount') %> <a href="/registro"><%= t('login.signup') %></a></p>
+</form>
+<%- include('partials/footer') %>

@@ -1,0 +1,31 @@
+<% const titulo = t('aju.title') %>
+<%- include('../partials/header', { titulo }) %>
+<form class="form" method="post" action="/admin/ajustes">
+  <h1><%= t('aju.title') %></h1>
+  <p class="muted"><%= t('aju.hint') %></p>
+  <% if (ok) { %><p class="ok" role="status"><%= ok %></p><% } %>
+  <% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+
+  <label><%= t('aju.sla') %> (<%= limites.sla_respuesta_min[0] %>–<%= limites.sla_respuesta_min[1] %>)
+    <input type="number" name="sla_respuesta_min" value="<%= valores.sla_respuesta_min %>" min="<%= limites.sla_respuesta_min[0] %>" max="<%= limites.sla_respuesta_min[1] %>" step="1" required>
+    <small class="muted"><%= t('aju.slaHint') %></small>
+  </label>
+  <label><%= t('aju.lead') %> (<%= limites.anticipacion_horas[0] %>–<%= limites.anticipacion_horas[1] %>)
+    <input type="number" name="anticipacion_horas" value="<%= valores.anticipacion_horas %>" min="<%= limites.anticipacion_horas[0] %>" max="<%= limites.anticipacion_horas[1] %>" step="1" required>
+    <small class="muted"><%= t('aju.leadHint') %></small>
+  </label>
+  <label><%= t('aju.alert') %> (<%= limites.alerta_plazo_horas[0] %>–<%= limites.alerta_plazo_horas[1] %>)
+    <input type="number" name="alerta_plazo_horas" value="<%= valores.alerta_plazo_horas %>" min="<%= limites.alerta_plazo_horas[0] %>" max="<%= limites.alerta_plazo_horas[1] %>" step="1" required>
+    <small class="muted"><%= t('aju.alertHint') %></small>
+  </label>
+  <label><%= t('aju.driverSla') %> (<%= limites.sla_conductor_min[0] %>–<%= limites.sla_conductor_min[1] %>)
+    <input type="number" name="sla_conductor_min" value="<%= valores.sla_conductor_min %>" min="<%= limites.sla_conductor_min[0] %>" max="<%= limites.sla_conductor_min[1] %>" step="1" required>
+    <small class="muted"><%= t('aju.driverSlaHint') %></small>
+  </label>
+  <label><%= t('aju.duration') %> (<%= limites.duracion_defecto_horas[0] %>–<%= limites.duracion_defecto_horas[1] %>)
+    <input type="number" name="duracion_defecto_horas" value="<%= valores.duracion_defecto_horas %>" min="<%= limites.duracion_defecto_horas[0] %>" max="<%= limites.duracion_defecto_horas[1] %>" step="1" required>
+    <small class="muted"><%= t('aju.durationHint') %></small>
+  </label>
+  <button class="btn"><%= t('aju.save') %></button>
+</form>
+<%- include('../partials/footer') %>

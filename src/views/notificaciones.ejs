@@ -1,0 +1,41 @@
+<% const titulo = t('notif.title') %>
+<%- include('partials/header', { titulo }) %>
+<div class="head-row">
+  <h1><%= t('notif.title') %></h1>
+  <% if (sinLeer) { %>
+    <form method="post" action="/notificaciones/leer-todas"><button class="btn"><%= t('notif.markAll') %></button></form>
+  <% } %>
+</div>
+<% if (ok) { %><p class="ok" role="status"><%= ok %></p><% } %>
+
+<section class="card" id="push-panel"
+  data-on="<%= t('push.on') %>" data-off="<%= t('push.off') %>" data-denied="<%= t('push.denied') %>"
+  data-unsupported="<%= t('push.unsupported') %>" data-ios="<%= t('push.ios') %>"
+  data-insecure="<%= t('push.insecure') %>" data-error="<%= t('push.error') %>">
+  <h2><%= t('push.title') %></h2>
+  <p class="muted"><%= t('push.help') %></p>
+  <p id="push-estado" class="muted" role="status">…</p>
+  <p class="actions" style="flex-wrap:wrap">
+    <button type="button" class="btn" id="push-boton" hidden><%= t('push.enable') %></button>
+    <button type="button" class="btn danger" id="push-baja" hidden><%= t('push.disable') %></button>
+    <% if (dispositivos) { %>
+      <form method="post" action="/notificaciones/prueba" class="inline"><button class="btn"><%= t('push.test') %></button></form>
+    <% } %>
+  </p>
+  <p class="muted"><small><%= t('push.devices').replace('{n}', dispositivos) %></small></p>
+</section>
+
+<h2 style="margin-top:28px"><%= t('notif.list') %></h2>
+<ul class="notifs">
+  <% items.forEach(n => { %>
+    <li class="<%= n.leida_en ? '' : 'sin-leer' %>">
+      <a href="/notificaciones/<%= n.id %>/abrir">
+        <strong><%= n.titulo %></strong>
+        <span><%= n.cuerpo %></span>
+        <small class="muted"><%= bogota(n.creada_en) %> · <%= t('notif.bogota') %></small>
+      </a>
+    </li>
+  <% }) %>
+  <% if (!items.length) { %><li class="muted"><%= t('notif.none') %></li><% } %>
+</ul>
+<%- include('partials/footer') %>

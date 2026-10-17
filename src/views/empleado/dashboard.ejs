@@ -1,0 +1,32 @@
+<% const titulo = t('nav.myServices') %>
+<% const clase = { pendiente: 'est-pendiente', aceptada: 'est-completada', rechazada: 'est-rechazada', sin_asignar: 'est-cancelada' } %>
+<% const porResponder = asignadas.filter(r => r.conductor_estado === 'pendiente' && r.estado === 'pendiente').length %>
+<%- include('../partials/header', { titulo }) %>
+<div class="head-row">
+  <h1><%= t('emp.title') %></h1>
+  <% if (can('disponibilidad.gestionar')) { %><a class="btn" href="/empleado/disponibilidad"><%= t('nav.availability') %></a><% } %>
+</div>
+<% if (porResponder) { %>
+  <p class="aviso-importante" role="status"><%= t('drv.banner').replace('{n}', porResponder) %></p>
+<% } %>
+<div class="table-wrap">
+<table>
+  <tr><th><%= t('bk.date') %></th><th><%= t('cli.time') %></th><th><%= t('svc.type') %></th><th><%= t('cli.pickup') %></th><th><%= t('bk.destination') %></th><th><%= t('bk.client') %></th><th><%= t('bk.pax') %></th><th><%= t('emp.special') %></th><th><%= t('drv.yourAnswer') %></th><th></th></tr>
+  <% asignadas.forEach(r => { %>
+    <tr class="<%= r.conductor_estado === 'pendiente' ? 'fila-pendiente' : '' %>">
+      <td><%= r.fecha %></td><td><%= r.hora || '—' %></td>
+      <td><%= r.tipo === 'tour' ? r.tour : t('svc.special') %></td>
+      <td><%= r.punto_recogida || '—' %></td><td><%= r.destino_final %></td>
+      <td><%= r.cliente %></td><td><%= r.pasajeros %></td>
+      <td><% if (r.lleva_mascotas) { %><%= t('cli.hasPets') %>: <%= r.mascotas_detalle %><br><% } %><% if (r.lleva_ninos) { %><%= t('cli.hasKids') %>: <%= r.ninos_detalle %><% } %><% if (!r.lleva_mascotas && !r.lleva_ninos) { %>—<% } %></td>
+      <td>
+        <span class="badge <%= clase[r.conductor_estado] %>"><%= t('drv.' + r.conductor_estado) %></span>
+        <% if (r.estado === 'confirmada') { %><br><small class="muted"><%= t('est.confirmada') %></small><% } %>
+      </td>
+      <td><a href="/empleado/reservas/<%= r.id %>"><%= r.conductor_estado === 'pendiente' ? t('drv.review') : t('cli.view') %></a></td>
+    </tr>
+  <% }) %>
+  <% if (!asignadas.length) { %><tr><td colspan="10" class="muted"><%= t('emp.none') %></td></tr><% } %>
+</table>
+</div>
+<%- include('../partials/footer') %>

@@ -1,0 +1,22 @@
+{
+  "name": "proyecto-dsb",
+  "version": "0.1.0",
+  "description": "Sistema web de transporte turístico: landing, base de datos y paneles por rol",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --watch --disable-warning=ExperimentalWarning src/server.js",
+    "seed": "node --disable-warning=ExperimentalWarning src/db/seed.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "libphonenumber-js": "^1.13.15",
+    "web-push": "^3.6.7"
+  }
+}

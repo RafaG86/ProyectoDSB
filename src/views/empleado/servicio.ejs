@@ -1,0 +1,45 @@
+<% const titulo = t('drv.service') + ' #' + r.id %>
+<% const clase = { pendiente: 'est-pendiente', aceptada: 'est-completada', rechazada: 'est-rechazada', sin_asignar: 'est-cancelada' } %>
+<%- include('../partials/header', { titulo }) %>
+<div class="head-row">
+  <h1><%= t('drv.service') %> #<%= r.id %></h1>
+  <span class="badge <%= clase[r.conductor_estado] %>"><%= t('drv.' + r.conductor_estado) %></span>
+</div>
+<% if (ok) { %><p class="ok" role="status"><%= ok %></p><% } %>
+<% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+
+<div class="card">
+  <dl class="detail">
+    <dt><%= t('bk.date') %></dt><dd><%= r.fecha %><%= r.hora ? ' · ' + r.hora : '' %> <small class="muted">(<%= t('notif.bogota') %>)</small></dd>
+    <dt><%= t('cli.origin') %></dt><dd><%= r.origen %></dd>
+    <dt><%= t('cli.pickup') %></dt><dd><%= r.punto_recogida || '—' %></dd>
+    <dt><%= t('bk.destination') %></dt><dd><%= r.destino_final %></dd>
+    <dt><%= t('svc.type') %></dt><dd><%= r.tipo === 'tour' ? r.tour : t('svc.special') %></dd>
+    <dt><%= t('bk.client') %></dt><dd><%= r.cliente %></dd>
+    <dt><%= t('cli.pax') %></dt><dd><%= r.pasajeros %></dd>
+    <dt><%= t('cli.hasPets') %></dt><dd><%= r.lleva_mascotas ? t('cli.yes') + ' — ' + r.mascotas_detalle : t('cli.no') %></dd>
+    <dt><%= t('cli.hasKids') %></dt><dd><%= r.lleva_ninos ? t('cli.yes') + ' — ' + r.ninos_detalle : t('cli.no') %></dd>
+    <% if (r.notas) { %><dt><%= t('cli.notes') %></dt><dd><%= r.notas %></dd><% } %>
+    <dt><%= t('bk.status') %></dt><dd><span class="badge est-<%= r.estado %>"><%= t('est.' + r.estado) %></span></dd>
+    <% if (r.conductor_nota) { %><dt><%= t('assign.note') %></dt><dd><%= r.conductor_nota %></dd><% } %>
+  </dl>
+</div>
+
+<% if (puedeResponder && can('servicios.responder')) { %>
+<section class="card" style="margin-top:16px">
+  <h2><%= t('drv.answerTitle') %></h2>
+  <p class="muted"><%= t('drv.help') %></p>
+  <form class="form" method="post" action="/empleado/reservas/<%= r.id %>/responder" style="max-width:none">
+    <label><%= t('drv.reason') %> <textarea name="nota" rows="2" maxlength="500"></textarea></label>
+    <div class="actions" style="flex-wrap:wrap">
+      <% if (r.conductor_estado !== 'aceptada') { %><button class="btn" name="decision" value="aceptar"><%= t('drv.accept') %></button><% } %>
+      <button class="btn danger" name="decision" value="rechazar"><%= t('drv.decline') %></button>
+    </div>
+  </form>
+</section>
+<% } else if (r.estado === 'confirmada') { %>
+  <p class="muted" style="margin-top:16px"><%= t('drv.confirmedInfo') %></p>
+<% } %>
+
+<p class="actions"><a href="/empleado"><%= t('drv.back') %></a></p>
+<%- include('../partials/footer') %>

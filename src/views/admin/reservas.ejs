@@ -1,15 +1,20 @@
 <% const titulo = t('bk.title') %>
 <%- include('../partials/header', { titulo }) %>
-<h1><%= t('bk.title') %></h1>
+<div class="head-row">
+  <h1><%= t('bk.title') %></h1>
+  <% if (can('reservas.eliminar')) { %><a href="/admin/reservas/eliminadas"><%= t('del.history') %></a><% } %>
+</div>
+<% if (ok) { %><p class="ok" role="status"><%= ok %></p><% } %>
 
 <nav class="filters" aria-label="<%= t('bk.status') %>">
-  <a href="/admin/reservas" class="<%= !filtro ? 'active' : '' %>"><%= t('bk.filterAll') %></a>
+  <a href="/admin/reservas" class="<%= !filtro && !filtroPago ? 'active' : '' %>"><%= t('bk.filterAll') %></a>
+  <a href="/admin/reservas?pago=en_revision" class="<%= filtroPago ? 'active' : '' %>"><%= t('bk.filterPay') %></a>
   <% estados.forEach(e => { %><a href="/admin/reservas?estado=<%= e %>" class="<%= filtro === e ? 'active' : '' %>"><%= t('est.' + e) %></a><% }) %>
 </nav>
 
 <div class="table-wrap">
 <table>
-  <tr><th>#</th><th><%= t('bk.date') %></th><th><%= t('cli.time') %></th><th><%= t('bk.client') %></th><th><%= t('svc.type') %></th><th><%= t('bk.destination') %></th><th><%= t('bk.pax') %></th><th><%= t('bk.total') %></th><th><%= t('bk.status') %></th><th><%= t('sla.deadline') %></th><th><%= t('sla.driver') %></th><th></th></tr>
+  <tr><th>#</th><th><%= t('bk.date') %></th><th><%= t('cli.time') %></th><th><%= t('bk.client') %></th><th><%= t('svc.type') %></th><th><%= t('bk.destination') %></th><th><%= t('bk.pax') %></th><th><%= t('bk.total') %></th><th><%= t('bk.status') %></th><th><%= t('bk.payment') %></th><th><%= t('sla.deadline') %></th><th><%= t('sla.driver') %></th><th></th></tr>
   <% reservas.forEach(r => { %>
     <tr>
       <td><%= r.id %></td><td><%= r.fecha %></td><td><%= r.hora || '—' %></td><td><%= r.cliente %></td>
@@ -17,12 +22,13 @@
       <td><%= r.pasajeros %></td>
       <td><%= r.total == null ? '—' : money(r.total, r.moneda || 'USD') %></td>
       <td><span class="badge est-<%= r.estado %>"><%= t('est.' + r.estado) %></span><% if (r.autorizacion === 'pendiente') { %><br><small class="muted"><%= t('aut.needed') %></small><% } %></td>
+      <td><span class="badge <%= { sin_pago: 'est-cancelada', en_revision: 'est-pendiente', confirmado: 'est-completada', rechazado: 'est-rechazada' }[r.pago_estado] %>"><%= t('pay.status.' + r.pago_estado) %></span></td>
       <td><% if (r.estado === 'pendiente') { %><span class="badge <%= { ok: 'est-completada', urgente: 'est-pendiente', vencido: 'est-rechazada' }[r.t.estadoPlazo] %>"><%= r.t.restante < 0 ? t('sla.expired') : duracion(r.t.restante) %></span><% } else { %>—<% } %></td>
       <td><span class="badge <%= { pendiente: 'est-pendiente', aceptada: 'est-completada', rechazada: 'est-rechazada', sin_asignar: 'est-cancelada' }[r.conductor_estado] %>"><%= t('cond.' + r.conductor_estado) %></span></td>
       <td><a href="/admin/reservas/<%= r.id %>"><%= t('bk.manage') %></a></td>
     </tr>
   <% }) %>
-  <% if (!reservas.length) { %><tr><td colspan="12" class="muted"><%= t('bk.none') %></td></tr><% } %>
+  <% if (!reservas.length) { %><tr><td colspan="13" class="muted"><%= t('bk.none') %></td></tr><% } %>
 </table>
 </div>
 <%- include('../partials/footer') %>

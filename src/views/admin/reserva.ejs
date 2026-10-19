@@ -218,6 +218,38 @@
     <% } %>
   </section>
 
+  <section class="card">
+    <h2><%= t('pay.admin.title') %></h2>
+    <p class="aviso-sim" role="note"><%= t('pay.sim') %></p>
+    <p><span class="badge <%= { sin_pago: 'est-cancelada', en_revision: 'est-pendiente', confirmado: 'est-completada', rechazado: 'est-rechazada' }[r.pago_estado] %>"><%= t('pay.status.' + r.pago_estado) %></span></p>
+    <% if (r.pago_estado === 'sin_pago') { %>
+      <p class="muted"><%= t('pay.admin.none') %></p>
+      <% if (r.total != null) { %><p class="muted"><%= t('pay.admin.expected') %>: <%= money(montoPago, 'COP') %></p><% } %>
+    <% } else { %>
+      <dl class="detail">
+        <dt><%= t('pay.admin.expected') %></dt><dd><strong><%= money(montoPago, 'COP') %></strong></dd>
+        <dt><%= t('pay.company') %></dt><dd><%= nequi.numero ? nequi.numero.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1 $2 $3') : '—' %></dd>
+        <dt><%= t('pay.code') %></dt><dd><strong><%= r.pago_codigo || '—' %></strong></dd>
+        <dt><%= t('pay.admin.clientNumber') %></dt><dd><%= r.pago_nequi_cliente || '—' %></dd>
+        <dt><%= t('pay.reference') %></dt><dd><%= r.pago_referencia || '—' %></dd>
+        <% if (r.pago_enviado_en) { %><dt><%= t('pay.sentOn').replace('{t}', '') %></dt><dd><%= bogota(r.pago_enviado_en) %></dd><% } %>
+        <% if (r.pago_revisado_en) { %><dt><%= t('pay.admin.reviewedAt') %></dt><dd><%= bogota(r.pago_revisado_en) %></dd><% } %>
+        <% if (r.pago_nota) { %><dt><%= t('pay.reasonLabel') %></dt><dd><%= r.pago_nota %></dd><% } %>
+      </dl>
+      <% if (r.pago_evidencia) { %><p><a class="btn" href="/admin/reservas/<%= r.id %>/evidencia" target="_blank" rel="noopener"><%= t('pay.viewEvidence') %></a></p><% } %>
+    <% } %>
+    <% if (r.pago_estado === 'en_revision' && r.estado === 'pendiente' && can('pagos.verificar')) { %>
+      <p class="muted"><%= t('pay.admin.verify').replace('{code}', r.pago_codigo || '') %></p>
+      <form class="form" method="post" action="/admin/reservas/<%= r.id %>/pago" style="max-width:none">
+        <label><%= t('pay.admin.note') %> <textarea name="nota" rows="2" maxlength="500"></textarea></label>
+        <div class="actions" style="flex-wrap:wrap">
+          <button class="btn" name="decision" value="confirmar"><%= t('pay.admin.confirm') %></button>
+          <button class="btn danger" name="decision" value="rechazar"><%= t('pay.admin.reject') %></button>
+        </div>
+      </form>
+    <% } %>
+  </section>
+
   <% if (can('reservas.gestionar') && siguientes.length) { %>
   <section class="card">
     <h2><%= t('state.title') %></h2>
@@ -240,6 +272,23 @@
   </section>
   <% } %>
 </div>
+
+<% if (can('reservas.eliminar')) { %>
+<section class="card zona-peligro" style="margin-top:24px">
+  <h2><%= t('del.title') %></h2>
+  <p class="muted"><%= t('del.help') %></p>
+  <% if (r.pago_estado === 'confirmado') { %><p class="error"><strong><%= t('del.warnPaid') %></strong></p>
+  <% } else if (['confirmada', 'completada'].includes(r.estado)) { %><p class="error"><strong><%= t('del.warnConfirmed') %></strong></p><% } %>
+  <form class="form" method="post" action="/admin/reservas/<%= r.id %>/eliminar" style="max-width:none"
+        onsubmit="return confirm(<%= JSON.stringify(t('del.confirmDialog')) %>)">
+    <label><%= t('del.reason') %> <textarea name="motivo" rows="2" maxlength="300" placeholder="<%= t('del.reasonPh') %>" required></textarea></label>
+    <label class="check"><input type="checkbox" name="avisar" value="1"> <%= t('del.notify') %></label>
+    <small class="muted"><%= t('del.notifyHint') %></small>
+    <label class="check"><input type="checkbox" name="confirmo" value="1" required> <%= t('del.confirm') %></label>
+    <button class="btn danger"><%= t('del.button') %></button>
+  </form>
+</section>
+<% } %>
 
 <p class="actions"><a href="/admin/reservas"><%= t('cli.back') %></a></p>
 <%- include('../partials/footer') %>

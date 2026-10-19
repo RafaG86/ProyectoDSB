@@ -8,9 +8,10 @@ const { ORDEN } = require('../lib/divisas');
 const { analizar } = require('../lib/telefono');
 const { nombreCompleto } = require('../lib/sql');
 const ajustes = require('../lib/ajustes');
-const { avisar } = require('../lib/notificaciones');
+const { avisar, avisarEliminada } = require('../lib/notificaciones');
 const { recogidaMs, utcMs } = require('../lib/tiempo');
 const { disponibilidadConductor } = require('../lib/disponibilidad');
+const pagos = require('../lib/pagos');
 const { requireLogin, requirePermission, permisosDeRol } = require('../middleware/auth');
 
 router.use(requireLogin);
@@ -61,6 +62,7 @@ router.get('/', requirePermission('panel.admin'), (req, res) => {
     clientes: count("SELECT COUNT(*) n FROM usuarios u JOIN roles r ON r.clave = u.rol WHERE r.panel = 'cliente'"),
     empleados: count("SELECT COUNT(*) n FROM usuarios u JOIN roles r ON r.clave = u.rol WHERE r.panel = 'empleado'"),
     reservasPendientes: count("SELECT COUNT(*) n FROM reservas WHERE estado='pendiente'"),
+    pagosPorVerificar: count("SELECT COUNT(*) n FROM reservas WHERE pago_estado='en_revision'"),
     vehiculos: count('SELECT COUNT(*) n FROM vehiculos'),
   };
   const pendientes = db.prepare(`
@@ -137,7 +139,7 @@ const TRANSICIONES = {
   completada: [],
   cancelada: ['pendiente'],
 };
-const MENSAJES_OK = ['cotizada', 'asignada', 'estado', 'autorizacion'];
+const MENSAJES_OK = ['cotizada', 'asignada', 'estado', 'autorizacion', 'pago'];
 
 const SELECT_ADMIN = `
   SELECT r.*, ${nombreCompleto('c')} AS cliente, c.email AS cliente_email, c.telefono AS cliente_tel,
@@ -152,9 +154,20 @@ const SELECT_ADMIN = `
 
 router.get('/reservas', requirePermission('reservas.ver_todas'), (req, res) => {
   const filtro = ESTADOS.includes(req.query.estado) ? req.query.estado : null;
-  const reservas = db.prepare(SELECT_ADMIN + (filtro ? ' WHERE r.estado = ?' : '') +
-    " ORDER BY (r.estado = 'pendiente') DESC, r.fecha DESC, r.hora DESC").all(...(filtro ? [filtro] : []));
-  res.render('admin/reservas', { reservas: reservas.map((r) => ({ ...r, t: tiemposDe(r) })), filtro, estados: ESTADOS });
+  const filtroPago = req.query.pago === 'en_revision' ? 'en_revision' : null;
+  const donde = [], params = [];
+  if (filtro) { donde.push('r.estado = ?'); params.push(filtro); }
+  if (filtroPago) { donde.push('r.pago_estado = ?'); params.push(filtroPago); }
+  const reservas = db.prepare(SELECT_ADMIN + (donde.length ? ' WHERE ' + donde.join(' AND ') : '') +
+    " ORDER BY (r.estado = 'pendiente') DESC, r.fecha DESC, r.hora DESC").all(...params);
+  const ok = req.query.ok === 'eliminada' && /^\d+$/.test(String(req.query.id)) ? req.t('del.ok').replace('{id}', req.query.id) : null;
+  res.render('admin/reservas', { reservas: reservas.map((r) => ({ ...r, t: tiemposDe(r) })), filtro, filtroPago, estados: ESTADOS, ok });
+});
+
+// Historial de reservas eliminadas (debe ir antes de /reservas/:id para que "eliminadas" no se lea como un número).
+router.get('/reservas/eliminadas', requirePermission('reservas.eliminar'), (req, res) => {
+  const filas = db.prepare('SELECT * FROM reservas_eliminadas ORDER BY id DESC LIMIT 200').all();
+  res.render('admin/eliminadas', { filas: filas.map((f) => ({ ...f, r: JSON.parse(f.resumen) })) });
 });
 
 // Lo que debe cumplirse para que el administrador pueda confirmar la reserva al cliente.
@@ -166,6 +179,7 @@ function requisitosDe(r) {
     { clave: sinCondiciones ? 'authNA' : 'auth', ok: sinCondiciones || r.autorizacion === 'autorizada' },
     { clave: 'driver', ok: !!r.empleado_id && r.conductor_estado === 'aceptada' },
     { clave: 'lead', ok: recogidaMs(r.fecha, r.hora) >= Date.now() + horas * 3600000, horas },
+    { clave: 'pay', ok: r.pago_estado === 'confirmado' },
   ];
 }
 
@@ -187,6 +201,8 @@ function vistaReserva(req, res, id, { error = null, ok = null } = {}, status = 2
                              WHERE ro.panel = 'empleado' AND u.activo = 1 ORDER BY u.nombre`).all()
       .map((e) => ({ ...e, disp: disponibilidadConductor(e.id, { id: r.id, fecha: r.fecha, hora: r.hora, duracion_hrs: r.duracion_hrs }) })),
     requisitos: requisitosDe(r),
+    nequi: pagos.nequiEmpresa(),
+    montoPago: r.pago_monto_cop ?? pagos.montoCOP(r, req.divisas),
     vehiculos: db.prepare("SELECT * FROM vehiculos WHERE estado != 'mantenimiento' OR id = ? ORDER BY placa").all(r.vehiculo_id ?? 0),
     siguientes: TRANSICIONES[r.estado],
     abierta: ['pendiente', 'confirmada'].includes(r.estado),
@@ -203,10 +219,12 @@ const num = (v) => (String(v ?? '').trim() === '' ? 0 : Number(String(v).replace
 const dinero = (n) => Number.isFinite(n) && n >= 0 && n <= 1e9; // tope de cordura (en COP las cifras son grandes)
 
 router.post('/reservas/:id/cotizar', gestionarReservas, (req, res) => {
-  const r = db.prepare('SELECT id, estado FROM reservas WHERE id = ?').get(req.params.id);
+  const r = db.prepare('SELECT id, estado, pago_estado FROM reservas WHERE id = ?').get(req.params.id);
   if (!r) return res.redirect('/admin/reservas');
   const falla = (clave) => vistaReserva(req, res, r.id, { error: req.t(clave) }, 400);
   if (!['pendiente', 'confirmada'].includes(r.estado)) return falla('res.errClosed');
+  // Con comprobante enviado o pago confirmado el valor ya no puede cambiar (el cliente pagó esa cifra).
+  if (['en_revision', 'confirmado'].includes(r.pago_estado)) return falla('res.errPaid');
   const tarifa = db.prepare('SELECT * FROM tarifas WHERE id = ? AND activo = 1').get(req.body.tarifa_id);
   if (!tarifa) return falla('res.errTarifa');
   const moneda = req.divisas[req.body.moneda];
@@ -282,7 +300,7 @@ router.post('/reservas/:id/asignar', gestionarReservas, (req, res) => {
 });
 
 router.post('/reservas/:id/estado', gestionarReservas, (req, res) => {
-  const r = db.prepare('SELECT id, estado, total, autorizacion, fecha, hora, empleado_id, conductor_estado FROM reservas WHERE id = ?').get(req.params.id);
+  const r = db.prepare('SELECT id, estado, total, autorizacion, fecha, hora, empleado_id, conductor_estado, pago_estado FROM reservas WHERE id = ?').get(req.params.id);
   if (!r) return res.redirect('/admin/reservas');
   const nuevo = req.body.estado;
   const falla = (clave) => vistaReserva(req, res, r.id, { error: req.t(clave) }, 400);
@@ -294,6 +312,8 @@ router.post('/reservas/:id/estado', gestionarReservas, (req, res) => {
   if (nuevo === 'confirmada' && !r.empleado_id) return falla('res.errNeedDriver');
   if (nuevo === 'confirmada' && r.conductor_estado === 'pendiente') return falla('res.errDriverPending');
   if (nuevo === 'confirmada' && r.conductor_estado === 'rechazada') return falla('res.errDriverRejected');
+  // La reserva se confirma al verificar el pago; esta vía solo sirve para re-confirmar un pago ya verificado.
+  if (nuevo === 'confirmada' && r.pago_estado !== 'confirmado') return falla('res.errNeedPayment');
   // Formalizar = confirmar. Desde ese momento deben quedar, como mínimo, N horas (24) hasta la recogida.
   if (nuevo === 'confirmada' && recogidaMs(r.fecha, r.hora) < Date.now() + ajustes.obtener('anticipacion_horas') * 3600000) {
     return vistaReserva(req, res, r.id, { error: req.t('res.errLead').replace('{horas}', ajustes.obtener('anticipacion_horas')) }, 400);
@@ -307,6 +327,85 @@ router.post('/reservas/:id/estado', gestionarReservas, (req, res) => {
     avisar(nuevo === 'confirmada' ? 'servicio_confirmado' : 'asignacion_cancelada', r.id); // y al conductor, si hay uno asignado
   }
   res.redirect(`/admin/reservas/${r.id}?ok=estado`);
+});
+
+// ---- Eliminar una reserva ----
+// Por ahora solo el administrador, con una justificación obligatoria (p. ej. "es una prueba"). Se borra la reserva con su
+// comprobante de pago y sus avisos, pero queda un registro de quién la eliminó y por qué. (En producción la eliminación
+// deberá autorizarla el cliente que hizo la reserva.)
+router.post('/reservas/:id/eliminar', requirePermission('reservas.eliminar'), (req, res) => {
+  const r = db.prepare(SELECT_ADMIN + ' WHERE r.id = ?').get(req.params.id);
+  if (!r) return res.redirect('/admin/reservas');
+  const falla = (clave) => vistaReserva(req, res, r.id, { error: req.t(clave) }, 400);
+  const motivo = String(req.body.motivo ?? '').trim().replace(/\s+/g, ' ').slice(0, 300);
+  if (motivo.length < 5) return falla('del.errReason');
+  if (req.body.confirmo !== '1') return falla('del.errConfirm');
+
+  const avisar_ = req.body.avisar === '1';
+  const resumen = {
+    tipo: r.tipo, servicio: r.tipo === 'tour' ? r.tour : null, destino: r.destino_final, fecha: r.fecha, hora: r.hora, pasajeros: r.pasajeros,
+    estado: r.estado, conductor: r.empleado, conductor_estado: r.conductor_estado,
+    total: r.total, moneda: r.moneda, pago_estado: r.pago_estado, pago_monto_cop: r.pago_monto_cop, pago_referencia: r.pago_referencia,
+  };
+  db.exec('BEGIN');
+  try {
+    db.prepare(`INSERT INTO reservas_eliminadas (reserva_id, cliente_id, cliente_nombre, resumen, motivo, eliminado_por, eliminado_por_nombre, avisado)
+                VALUES (?,?,?,?,?,?,?,?)`)
+      .run(r.id, r.cliente_id, r.cliente, JSON.stringify(resumen), motivo, req.session.user.id, req.session.user.nombre, avisar_ ? 1 : 0);
+    db.prepare('DELETE FROM notificaciones WHERE reserva_id = ?').run(r.id); // sus avisos apuntarían a una reserva que ya no existe
+    db.prepare('DELETE FROM reservas WHERE id = ?').run(r.id);
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+  if (r.pago_evidencia) pagos.borrarEvidencia(r.pago_evidencia); // el archivo se borra solo si la eliminación quedó confirmada
+  if (avisar_) avisarEliminada(r, motivo);
+  res.redirect(`/admin/reservas?ok=eliminada&id=${r.id}`);
+});
+
+// ---- Verificación del pago (Nequi simulado) ----
+// El administrador revisa en la evidencia el valor, el número Nequi de la empresa y el código de la reserva.
+// Al confirmar el pago la reserva queda confirmada; al rechazarlo el cliente puede corregirlo y reenviarlo.
+router.post('/reservas/:id/pago', requirePermission('pagos.verificar'), (req, res) => {
+  const r = db.prepare('SELECT id, estado, pago_estado, total, autorizacion, fecha, hora, empleado_id, conductor_estado FROM reservas WHERE id = ?').get(req.params.id);
+  if (!r) return res.redirect('/admin/reservas');
+  const falla = (clave) => vistaReserva(req, res, r.id, { error: req.t(clave) }, 400);
+  if (r.pago_estado !== 'en_revision' || r.estado !== 'pendiente') return falla('res.errPayState');
+
+  if (req.body.decision === 'rechazar') {
+    const nota = String(req.body.nota ?? '').trim().slice(0, 500);
+    if (nota.length < 3) return falla('res.errPayNote');
+    db.prepare("UPDATE reservas SET pago_estado = 'rechazado', pago_nota = ?, pago_revisado_en = datetime('now') WHERE id = ?").run(nota, r.id);
+    marcarRespuesta(r.id);
+    avisar('pago_rechazado', r.id, { nota });
+    return res.redirect(`/admin/reservas/${r.id}?ok=pago`);
+  }
+  if (req.body.decision !== 'confirmar') return falla('res.errPayState');
+
+  // Confirmar el pago confirma la reserva, así que también deben cumplirse todos los demás requisitos.
+  if (r.total == null) return falla('res.errNeedQuote');
+  if (r.autorizacion === 'pendiente') return falla('res.errNeedAuth');
+  if (r.autorizacion === 'rechazada') return falla('res.errRejected');
+  if (!r.empleado_id) return falla('res.errNeedDriver');
+  if (r.conductor_estado === 'pendiente') return falla('res.errDriverPending');
+  if (r.conductor_estado === 'rechazada') return falla('res.errDriverRejected');
+  const horas = ajustes.obtener('anticipacion_horas');
+  if (recogidaMs(r.fecha, r.hora) < Date.now() + horas * 3600000) {
+    return vistaReserva(req, res, r.id, { error: req.t('res.errLead').replace('{horas}', horas) }, 400);
+  }
+  db.prepare(`UPDATE reservas SET pago_estado = 'confirmado', pago_nota = NULL, pago_revisado_en = datetime('now'),
+              estado = 'confirmada', confirmada_en = datetime('now') WHERE id = ?`).run(r.id);
+  marcarRespuesta(r.id);
+  avisar('pago_confirmado', r.id);        // al cliente: pago verificado y reserva confirmada
+  avisar('servicio_confirmado', r.id);    // al conductor
+  res.redirect(`/admin/reservas/${r.id}?ok=pago`);
+});
+
+router.get('/reservas/:id/evidencia', requirePermission('reservas.ver_todas', 'pagos.verificar'), (req, res) => {
+  const r = db.prepare('SELECT id, pago_evidencia, pago_evidencia_tipo FROM reservas WHERE id = ?').get(req.params.id);
+  if (!r || !r.pago_evidencia) return res.status(404).end();
+  pagos.enviarEvidencia(res, r);
 });
 
 // Autorización del transporte con mascotas o niños: se decide mientras la reserva está pendiente.
@@ -329,7 +428,7 @@ router.post('/reservas/:id/autorizacion', gestionarReservas, (req, res) => {
 // ---- Ajustes de atención (tiempos objetivo y anticipación) ----
 const gestionarAjustes = requirePermission('ajustes.gestionar');
 const vistaAjustes = (req, res, { error = null, ok = null } = {}, status = 200) =>
-  res.status(status).render('admin/ajustes', { valores: ajustes.todos(), limites: ajustes.LIMITES, error, ok });
+  res.status(status).render('admin/ajustes', { valores: ajustes.todos(), limites: ajustes.LIMITES, nequi: pagos.nequiEmpresa(), error, ok });
 
 router.get('/ajustes', gestionarAjustes, (req, res) => vistaAjustes(req, res, { ok: req.query.ok === '1' ? req.t('aju.ok') : null }));
 
@@ -340,7 +439,13 @@ router.post('/ajustes', gestionarAjustes, (req, res) => {
     if (!Number.isInteger(n) || n < min || n > max) return vistaAjustes(req, res, { error: req.t('aju.err') }, 400);
     nuevos[clave] = n;
   }
+  // Cuenta Nequi de la empresa (vacía = los clientes todavía no pueden pagar).
+  const numeroCrudo = String(req.body.nequi_numero ?? '').trim();
+  const nequi = numeroCrudo ? pagos.nequiValido(numeroCrudo) : '';
+  if (numeroCrudo && !nequi) return vistaAjustes(req, res, { error: req.t('aju.errNequi') }, 400);
   for (const [clave, n] of Object.entries(nuevos)) ajustes.guardar(clave, n);
+  ajustes.guardar('nequi_numero', nequi);
+  ajustes.guardar('nequi_titular', String(req.body.nequi_titular ?? '').trim().replace(/\s+/g, ' ').slice(0, 60));
   res.redirect('/admin/ajustes?ok=1');
 });
 

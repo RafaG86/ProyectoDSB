@@ -6,12 +6,18 @@ const { analizar } = require('../lib/telefono');
 const { enBogota, hoyBogota, recogidaMs } = require('../lib/tiempo');
 const ajustes = require('../lib/ajustes');
 const { avisar } = require('../lib/notificaciones');
+const multer = require('multer');
+const pagos = require('../lib/pagos');
 const { nombreCompleto } = require('../lib/sql');
 
 const ORIGEN = 'Bogotá'; // por ahora el servicio solo sale de Bogotá
 const toursActivos = () => db.prepare('SELECT * FROM tours WHERE activo = 1').all();
 const ACTIVAS = ['pendiente', 'confirmada'];
-const MENSAJES_OK = ['creada', 'cancelada'];
+const MENSAJES_OK = ['creada', 'cancelada', 'pago'];
+
+// El cliente solo puede cancelar mientras la reserva sigue pendiente y no ha enviado el comprobante de pago.
+// Después (comprobante enviado o reserva confirmada) cualquier cambio lo hace la empresa.
+const puedeCancelar = (r) => r.estado === 'pendiente' && ['sin_pago', 'rechazado'].includes(r.pago_estado) && r.fecha >= hoyBogota();
 
 const SELECT_RESERVA = `
   SELECT r.*, t.nombre AS tour_nombre, t.precio AS tour_precio, t.moneda AS tour_moneda, t.duracion_hrs,
@@ -133,18 +139,90 @@ router.get('/reservas/:id', requirePermission('reservas.ver_propias'), (req, res
       km: reserva.km, precio_km: reserva.precio_km, minimo: reserva.tarifa_minima, peajes: reserva.peajes, viaticos: reserva.viaticos,
       decimales: req.divisas[reserva.moneda || 'USD'].decimales,
     });
-  res.render('cliente/reserva', { r: reserva, cot, ok, cancelable: ACTIVAS.includes(reserva.estado) && reserva.fecha >= hoyBogota() });
+  res.render('cliente/reserva', {
+    r: reserva, cot, ok, cancelable: puedeCancelar(reserva),
+    pago: { requisitos: pagos.requisitosPago(reserva), monto: pagos.montoCOP(reserva, req.divisas), nequi: pagos.nequiEmpresa() },
+  });
 });
 
 router.post('/reservas/:id/cancelar', requirePermission('reservas.cancelar_propia'), (req, res) => {
-  const r = db.prepare('SELECT id, estado, fecha FROM reservas WHERE id = ? AND cliente_id = ?').get(req.params.id, req.session.user.id);
+  const r = db.prepare('SELECT id, estado, fecha, pago_estado FROM reservas WHERE id = ? AND cliente_id = ?').get(req.params.id, req.session.user.id);
   if (!r) return res.redirect('/cliente');
-  if (ACTIVAS.includes(r.estado) && r.fecha >= hoyBogota()) {
+  if (puedeCancelar(r)) {
     db.prepare("UPDATE reservas SET estado = 'cancelada' WHERE id = ?").run(r.id);
     avisar('cancelada_cliente', r.id);
     return res.redirect(`/cliente/reservas/${r.id}?ok=cancelada`);
   }
   res.redirect(`/cliente/reservas/${r.id}`);
+});
+
+// ---- Pago simulado por Nequi ----
+const pagar = requirePermission('pagos.realizar');
+const subida = multer({ storage: multer.memoryStorage(), limits: { fileSize: pagos.MAX_BYTES, files: 1, fields: 10 } }).single('evidencia');
+// Los errores de la subida (archivo muy grande, etc.) se muestran en el formulario en vez de romper la página.
+const recibirArchivo = (req, res, next) => subida(req, res, (err) => { if (err) req.errorSubida = err.code === 'LIMIT_FILE_SIZE' ? 'pay.errSize' : 'pay.errFile'; next(); });
+
+const SELECT_PAGO = SELECT_RESERVA + ' WHERE r.id = ? AND r.cliente_id = ?';
+
+function vistaPago(req, res, id, { error = null, valores = {} } = {}, status = 200) {
+  const r = db.prepare(SELECT_PAGO).get(id, req.session.user.id);
+  if (!r) return res.status(404).render('error', { titulo: req.t('err.404.title'), mensaje: req.t('err.404.msg') });
+  const requisitos = pagos.requisitosPago(r);
+  const nequi = pagos.nequiEmpresa();
+  const puedeEnviar = r.estado === 'pendiente' && ['sin_pago', 'rechazado'].includes(r.pago_estado) && requisitos.ok && !!nequi.numero;
+  // El código se asigna la primera vez que se muestra el formulario, para que el cliente lo escriba en su transferencia.
+  if (puedeEnviar && !r.pago_codigo) {
+    r.pago_codigo = pagos.codigoPago(r.id);
+    db.prepare('UPDATE reservas SET pago_codigo = ? WHERE id = ?').run(r.pago_codigo, r.id);
+  }
+  res.status(status).render('cliente/pago', { r, requisitos, nequi, monto: pagos.montoCOP(r, req.divisas), puedeEnviar, error, valores });
+}
+
+router.get('/reservas/:id/pagar', pagar, (req, res) => vistaPago(req, res, req.params.id));
+
+router.post('/reservas/:id/pagar', pagar, recibirArchivo, (req, res) => {
+  const r = db.prepare(SELECT_PAGO).get(req.params.id, req.session.user.id);
+  if (!r) return res.redirect('/cliente');
+  const valores = { nequi: String(req.body.nequi ?? '').trim().slice(0, 30), referencia: String(req.body.referencia ?? '').trim().slice(0, 40) };
+  const falla = (clave, status = 400) => vistaPago(req, res, r.id, { error: req.t(clave), valores }, status);
+
+  const requisitos = pagos.requisitosPago(r);
+  if (r.estado !== 'pendiente' || !['sin_pago', 'rechazado'].includes(r.pago_estado) || !requisitos.ok || !pagos.nequiEmpresa().numero) return falla('pay.errNotReady');
+  if (req.errorSubida) return falla(req.errorSubida);
+
+  const nequi = pagos.nequiValido(valores.nequi);
+  if (!nequi) return falla('pay.errNequi');
+  if (!/^[A-Za-z0-9-]{4,30}$/.test(valores.referencia)) return falla('pay.errRef');
+  if (req.body.declaro !== '1') return falla('pay.errDeclare');
+  if (!req.file) return falla('pay.errNoFile');
+
+  // Si la tasa cambió entre que vio el valor y lo envió, se le pide revisar el nuevo valor.
+  const monto = pagos.montoCOP(r, req.divisas);
+  if (String(monto) !== String(req.body.monto ?? '')) return falla('pay.errAmount', 409);
+
+  const archivo = pagos.guardarEvidencia(req.file.buffer);
+  if (!archivo) return falla('pay.errFile');
+  // La misma referencia o el mismo comprobante no pueden usarse para dos reservas.
+  const repetida = db.prepare("SELECT id FROM reservas WHERE id != ? AND pago_estado IN ('en_revision','confirmado') AND pago_referencia = ? COLLATE NOCASE").get(r.id, valores.referencia);
+  const mismoArchivo = db.prepare("SELECT id FROM reservas WHERE id != ? AND pago_estado IN ('en_revision','confirmado') AND pago_hash = ?").get(r.id, archivo.hash);
+  if (repetida || mismoArchivo) {
+    pagos.borrarEvidencia(archivo.nombre);
+    return falla(repetida ? 'pay.errDupRef' : 'pay.errDupFile', 409);
+  }
+
+  if (r.pago_evidencia) pagos.borrarEvidencia(r.pago_evidencia); // reemplaza el comprobante rechazado
+  db.prepare(`UPDATE reservas SET pago_estado = 'en_revision', pago_nequi_cliente = ?, pago_referencia = ?, pago_evidencia = ?, pago_evidencia_tipo = ?,
+              pago_hash = ?, pago_monto_cop = ?, pago_enviado_en = datetime('now'), pago_revisado_en = NULL, pago_nota = NULL WHERE id = ?`)
+    .run(nequi, valores.referencia, archivo.nombre, archivo.tipo, archivo.hash, monto, r.id);
+  avisar('pago_enviado', r.id);
+  res.redirect(`/cliente/reservas/${r.id}?ok=pago`);
+});
+
+// El cliente solo puede ver su propio comprobante.
+router.get('/reservas/:id/evidencia', pagar, (req, res) => {
+  const r = db.prepare('SELECT id, pago_evidencia, pago_evidencia_tipo FROM reservas WHERE id = ? AND cliente_id = ?').get(req.params.id, req.session.user.id);
+  if (!r || !r.pago_evidencia) return res.status(404).end();
+  pagos.enviarEvidencia(res, r);
 });
 
 module.exports = router;

@@ -37,8 +37,10 @@ flowchart TD
     D1 --> D2{El conductor responde}
     D2 -->|No puedo, con motivo| D3[Vuelve al admin<br/>para asignar a otro]
     D3 --> A3
-    D2 -->|Acepta| A4[Admin confirma la reserva]
-    A4 --> A4b{Quedan 24 h o más<br/>hasta la recogida?}
+    D2 -->|Acepta| P1[Cliente paga por Nequi<br/>PAGO SIMULADO: envía el valor y el código,<br/>y sube el comprobante]
+    P1 --> P2[Admin verifica el comprobante:<br/>valor, número de la empresa y código]
+    P2 -->|Rechaza con motivo| P1
+    P2 -->|Confirma el pago| A4b{Quedan 24 h o más<br/>hasta la recogida?}
     A4b -->|No| A4c[No se puede confirmar:<br/>acordar otra fecha o cancelar]
     A4b -->|Sí| RES2[(Reserva confirmada)]
 
@@ -61,11 +63,11 @@ flowchart TD
 stateDiagram-v2
     [*] --> pendiente: el cliente envía la solicitud
 
-    pendiente --> confirmada: admin confirma, exige cotización, autorización resuelta, conductor aceptó y 24 h de anticipación
-    pendiente --> cancelada: admin o cliente cancela
+    pendiente --> confirmada: al confirmar el admin el pago; exige cotización, autorización resuelta, conductor aceptó y 24 h de anticipación
+    pendiente --> cancelada: admin cancela, o el cliente si aún no envió comprobante de pago
 
     confirmada --> completada: admin marca el servicio como realizado
-    confirmada --> cancelada: admin o cliente cancela, el cliente solo hasta el día del servicio
+    confirmada --> cancelada: solo el admin (el cliente debe contactar a la empresa)
     confirmada --> pendiente: admin la devuelve a pendiente
 
     cancelada --> pendiente: admin la reabre
@@ -77,6 +79,9 @@ Reglas que aplica el sistema:
 
 - Solo se puede **cotizar** y **asignar** mientras la reserva está *pendiente* o *confirmada*.
 - No se puede **confirmar** una reserva sin cotización.
+- **Pago (simulado):** la reserva solo queda confirmada cuando el administrador verifica el comprobante de pago. El cliente puede pagar cuando hay cotización, conductor aceptado y autorización (si aplica). Paga en pesos colombianos (la cotización se convierte con la tasa del día), indica su número Nequi y la referencia, escribe en el mensaje de la transferencia el código único de la reserva y sube el comprobante; el admin comprueba valor, número de la empresa y código. Si lo rechaza, el cliente puede corregirlo y reenviarlo. Con el comprobante enviado la cotización queda bloqueada.
+- **Eliminar una reserva:** por ahora solo el administrador, con una justificación obligatoria (por ejemplo, "es una prueba"). Se borra la reserva con su comprobante de pago y sus avisos; queda un registro (quién, cuándo, por qué y los datos principales) en *Reservas eliminadas*. Opcionalmente se avisa al cliente y al conductor. En producción, quien deberá autorizar la eliminación es el cliente que hizo la reserva.
+- **Cancelación por el cliente:** solo mientras la reserva está pendiente y sin comprobante enviado. Después, cualquier cambio lo hace la empresa.
 - Debe haber un **conductor asignado que haya aceptado** el servicio. Si lo rechaza (con motivo), la reserva vuelve al administrador para asignar a otro. Con la reserva confirmada solo se puede cambiar el vehículo; para cambiar de conductor hay que devolverla antes a *pendiente*.
 - Si lleva **mascotas o niños**, el admin debe **autorizar** el transporte antes de confirmar; si lo rechaza (con una nota para el cliente) no se puede confirmar. La decisión solo se toma mientras está *pendiente*.
 - La recogida debe ser como mínimo **24 horas después de formalizar (confirmar)** la reserva. Se exige al reservar y de nuevo al confirmar; el valor (24 h) se cambia en *Ajustes de atención*. Todo en hora de Bogotá, y el origen siempre es Bogotá.
@@ -113,8 +118,10 @@ flowchart TD
     I -->|Sí| I3[Muestra desglose:<br/>transporte, peajes, viáticos, total]
     H --> J[Conductor y vehículo asignados]
 
-    H --> K{Pendiente o confirmada<br/>y fecha de hoy en adelante?}
+    H --> K{Pendiente y sin comprobante<br/>de pago enviado?}
     K -->|Sí| L[Cancelar reserva]
+    K -->|No| K2[No puede cancelar:<br/>contacta a la empresa]
+    H --> PG[Pagar por Nequi cuando haya cotización,<br/>conductor aceptado y autorización]
     L --> M[(Reserva cancelada)]
 
     A --> P[Mi perfil<br/>datos y contraseña]
@@ -147,6 +154,9 @@ flowchart TD
     S3 -->|Sí| S4[(Asignación guardada<br/>conductor: pendiente de aceptar)]
 
     D --> E[Cambio de estado<br/>según el diagrama 2]
+    D --> X[Eliminar la reserva<br/>justificación obligatoria, p. ej. es una prueba]
+    X --> X2[(Se borra con su comprobante y avisos,<br/>y queda el registro de quién y por qué)]
+    B --> X3[Historial de reservas eliminadas]
 
     B --> T[Tarifario<br/>nombre, precio por km, tarifa mínima, activa]
     B --> DV[Divisas<br/>tasas de cambio por 1 USD, a mano]
@@ -206,6 +216,8 @@ El acceso se decide por **permisos**, no por nombre de rol. Cada nivel es un con
 | Cotizar, asignar y cambiar estado de reservas | ✅ | | |
 | Gestionar el tarifario por kilómetro | ✅ | | |
 | Gestionar divisas y tasas de cambio | ✅ | | |
+| Verificar y confirmar pagos | ✅ | | |
+| Eliminar reservas (con justificación) | ✅ | | |
 | Gestionar tiempos de respuesta y anticipación | ✅ | | |
 | Gestionar niveles de acceso | ✅ | | |
 | Ver sus servicios asignados | ✅ | ✅ | |
@@ -213,7 +225,8 @@ El acceso se decide por **permisos**, no por nombre de rol. Cada nivel es un con
 | Indicar sus fechas no disponibles | ✅ | ✅ | |
 | Crear sus propias reservas | ✅ | | ✅ |
 | Ver sus propias reservas | ✅ | | ✅ |
-| Cancelar sus propias reservas | ✅ | | ✅ |
+| Cancelar sus propias reservas (solo antes de pagar) | ✅ | | ✅ |
+| Pagar sus reservas | ✅ | | ✅ |
 
 - El **Administrador** siempre tiene todos los permisos y no se puede editar.
 - Los niveles de **Empleado** y **Cliente** vienen con esos permisos por defecto, pero se pueden cambiar.
@@ -233,6 +246,7 @@ flowchart LR
         H4[Tarifario por km y cotización]
         H5[Asignación y estados]
         H7[Divisas USD, EUR y COP<br/>tasas manuales y selector de moneda]
+        H10[Pago simulado por Nequi<br/>con comprobante y verificación del admin]
         H9[Confirmación del conductor<br/>y disponibilidad de conductores]
         H8[Avisos, tiempos de respuesta<br/>y app instalable en el celular]
         H6[Idiomas ES / EN / PT y tema claro-oscuro]
@@ -241,6 +255,8 @@ flowchart LR
     subgraph Pendiente
         P1[Gestión de vehículos<br/>agregar, editar, mantenimiento]:::pend
         P2[Aceptación de la cotización<br/>por el cliente]:::pend
+        P9[Pasarela de pago real<br/>y reembolsos]:::pend
+        P10[En producción: el cliente autoriza<br/>la eliminación de su reserva]:::pend
         P3[Agenda de vehículos<br/>avisar si un vehículo ya está ocupado]:::pend
         P4[Gestión de tours<br/>crear, editar, precios]:::pend
         P5[Protección CSRF<br/>en los formularios]:::pend

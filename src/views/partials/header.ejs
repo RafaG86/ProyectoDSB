@@ -17,39 +17,72 @@
   </script>
 </head>
 <body>
+<%
+  const ruta = currentPath.split('?')[0];
+  const cur = (href) => ((['/admin', '/cliente', '/empleado'].includes(href) ? ruta === href : ruta === href || ruta.startsWith(href + '/')) ? ' aria-current="page"' : '');
+  const grupoAdmin = can('panel.admin') || can('reservas.ver_todas') || can('usuarios.gestionar') || can('tarifas.gestionar') || can('divisas.gestionar') || can('ajustes.gestionar') || can('roles.gestionar');
+  // Quien entra por el panel de administración tiene todos los permisos, pero no necesita las secciones de conductor ni de cliente.
+  const grupoConductor = user && user.panel !== 'admin' && (can('servicios.ver_asignados') || can('disponibilidad.gestionar'));
+  const grupoCliente = user && user.panel !== 'admin' && (can('reservas.ver_propias') || can('reservas.crear_propia'));
+%>
 <header class="nav" id="barra">
   <a class="brand" href="/"><%- include('logo', { cls: 'logo-nav' }) %></a>
-  <% if (user) { %>
-    <a class="bell" href="/notificaciones" aria-label="<%= t('notif.title') %>" title="<%= t('notif.title') %>">
-      <span aria-hidden="true">🔔</span><span class="count" id="notif-badge" <%= sinLeer ? '' : 'hidden' %>><%= sinLeer %></span>
-    </a>
-  <% } %>
-  <button type="button" class="menu-toggle" id="menu-toggle" aria-label="<%= t('nav.menu') %>" aria-expanded="false">☰</button>
-  <nav>
+  <div class="nav-right">
+    <% if (!user) { %><a class="btn" href="/login"><%= t('nav.login') %></a><% } %>
     <% if (user) { %>
-      <% if (can('panel.admin')) { %><a href="/admin"><%= t('nav.panel') %></a><% } %>
-      <% if (can('usuarios.gestionar')) { %><a href="/admin/usuarios"><%= t('nav.users') %></a><% } %>
-      <% if (can('reservas.ver_todas')) { %><a href="/admin/reservas"><%= t('nav.bookings') %></a><% } %>
-      <% if (can('tarifas.gestionar')) { %><a href="/admin/tarifas"><%= t('nav.tariffs') %></a><% } %>
-      <% if (can('divisas.gestionar')) { %><a href="/admin/divisas"><%= t('nav.currencies') %></a><% } %>
-      <% if (can('ajustes.gestionar')) { %><a href="/admin/ajustes"><%= t('nav.settings') %></a><% } %>
-      <% if (can('roles.gestionar')) { %><a href="/admin/roles"><%= t('nav.roles') %></a><% } %>
-      <% if (can('servicios.ver_asignados')) { %><a href="/empleado"><%= t('nav.myServices') %></a><% } %>
-      <% if (can('disponibilidad.gestionar')) { %><a href="/empleado/disponibilidad"><%= t('nav.availability') %></a><% } %>
-      <% if (can('reservas.ver_propias')) { %><a href="/cliente"><%= t('nav.myBookings') %></a><% } %>
-      <% if (can('reservas.crear_propia')) { %><a href="/cliente/reservar"><%= t('nav.book') %></a><% } %>
-      <form action="/logout" method="post" class="inline"><a href="/perfil" title="<%= t('nav.profile') %>"><%= user.nombre %></a> <button class="link"><%= t('nav.logout') %></button></form>
-    <% } else { %>
-      <a href="/#tours"><%= t('nav.tours') %></a><a href="/registro"><%= t('nav.register') %></a><a class="btn" href="/login"><%= t('nav.login') %></a>
+      <a class="bell" href="/notificaciones" aria-label="<%= t('notif.title') %>" title="<%= t('notif.title') %>">
+        <span aria-hidden="true">🔔</span><span class="count" id="notif-badge" <%= sinLeer ? '' : 'hidden' %>><%= sinLeer %></span>
+      </a>
     <% } %>
-    <select class="lang-select" id="lang-select" aria-label="<%= t('lang.label') %>" data-next="<%= currentPath %>">
-      <% languages.forEach(l => { %><option value="<%= l.code %>" <%= l.code === lang ? 'selected' : '' %>><%= l.name %></option><% }) %>
-    </select>
-    <select class="lang-select" id="divisa-select" aria-label="<%= t('cur.label') %>" data-next="<%= currentPath %>">
-      <% listaDivisas.forEach(c => { %><option value="<%= c %>" <%= c === divisaVista ? 'selected' : '' %>><%= c %></option><% }) %>
-    </select>
-    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="<%= t('theme.toggle') %>" title="<%= t('theme.title') %>">🌙</button>
-  </nav>
+    <%# Un solo menú general: todas las opciones se despliegan aquí (funciona incluso sin JavaScript) %>
+    <details class="menu" id="menu">
+      <summary class="menu-btn" aria-label="<%= t('nav.menu') %>"><span aria-hidden="true">☰</span><span class="menu-text"><%= t('nav.menu') %></span></summary>
+      <nav class="menu-panel" aria-label="<%= t('nav.menu') %>">
+        <% if (user) { %>
+          <div class="menu-user"><a href="/perfil"<%- cur('/perfil') %>><strong><%= user.nombre %></strong><small><%= t('nav.profile') %></small></a></div>
+
+          <% if (grupoAdmin) { %>
+            <p class="menu-title"><%= t('menu.admin') %></p>
+            <% if (can('panel.admin')) { %><a href="/admin"<%- cur('/admin') %>><%= t('nav.panel') %></a><% } %>
+            <% if (can('reservas.ver_todas')) { %><a href="/admin/reservas"<%- cur('/admin/reservas') %>><%= t('nav.bookings') %></a><% } %>
+            <% if (can('usuarios.gestionar')) { %><a href="/admin/usuarios"<%- cur('/admin/usuarios') %>><%= t('nav.users') %></a><% } %>
+            <% if (can('tarifas.gestionar')) { %><a href="/admin/tarifas"<%- cur('/admin/tarifas') %>><%= t('nav.tariffs') %></a><% } %>
+            <% if (can('divisas.gestionar')) { %><a href="/admin/divisas"<%- cur('/admin/divisas') %>><%= t('nav.currencies') %></a><% } %>
+            <% if (can('ajustes.gestionar')) { %><a href="/admin/ajustes"<%- cur('/admin/ajustes') %>><%= t('nav.settings') %></a><% } %>
+            <% if (can('roles.gestionar')) { %><a href="/admin/roles"<%- cur('/admin/roles') %>><%= t('nav.roles') %></a><% } %>
+          <% } %>
+
+          <% if (grupoConductor) { %>
+            <p class="menu-title"><%= t('menu.driver') %></p>
+            <% if (can('servicios.ver_asignados')) { %><a href="/empleado"<%- cur('/empleado') %>><%= t('nav.myServices') %></a><% } %>
+            <% if (can('disponibilidad.gestionar')) { %><a href="/empleado/disponibilidad"<%- cur('/empleado/disponibilidad') %>><%= t('nav.availability') %></a><% } %>
+          <% } %>
+
+          <% if (grupoCliente) { %>
+            <p class="menu-title"><%= t('menu.client') %></p>
+            <% if (can('reservas.ver_propias')) { %><a href="/cliente"<%- cur('/cliente') %>><%= t('nav.myBookings') %></a><% } %>
+            <% if (can('reservas.crear_propia')) { %><a href="/cliente/reservar"<%- cur('/cliente/reservar') %>><%= t('nav.book') %></a><% } %>
+          <% } %>
+        <% } else { %>
+          <a href="/#tours"><%= t('nav.tours') %></a>
+          <a href="/registro"<%- cur('/registro') %>><%= t('nav.register') %></a>
+        <% } %>
+
+        <p class="menu-title"><%= t('menu.preferences') %></p>
+        <div class="menu-prefs">
+          <select class="lang-select" id="lang-select" aria-label="<%= t('lang.label') %>" data-next="<%= currentPath %>">
+            <% languages.forEach(l => { %><option value="<%= l.code %>" <%= l.code === lang ? 'selected' : '' %>><%= l.name %></option><% }) %>
+          </select>
+          <select class="lang-select" id="divisa-select" aria-label="<%= t('cur.label') %>" data-next="<%= currentPath %>">
+            <% listaDivisas.forEach(c => { %><option value="<%= c %>" <%= c === divisaVista ? 'selected' : '' %>><%= c %></option><% }) %>
+          </select>
+          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="<%= t('theme.toggle') %>" title="<%= t('theme.title') %>">🌙</button>
+        </div>
+
+        <% if (user) { %><form action="/logout" method="post"><button class="menu-logout"><%= t('nav.logout') %></button></form><% } %>
+      </nav>
+    </details>
+  </div>
 </header>
 <script>
   (function () {
@@ -71,11 +104,13 @@
       location.href = '/divisa/' + div.value + '?next=' + encodeURIComponent(div.dataset.next);
     });
 
-    var barra = document.getElementById('barra'), menu = document.getElementById('menu-toggle');
-    menu.addEventListener('click', function () {
-      var abierto = barra.classList.toggle('abierto');
-      menu.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+    // El menú se cierra al tocar fuera, con Escape o al elegir una opción.
+    var menu = document.getElementById('menu');
+    document.addEventListener('click', function (e) { if (menu.open && !menu.contains(e.target)) menu.open = false; });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && menu.open) { menu.open = false; menu.querySelector('summary').focus(); }
     });
+    menu.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', function () { menu.open = false; }); });
 
     var sel = document.getElementById('lang-select');
     sel.addEventListener('change', function () {

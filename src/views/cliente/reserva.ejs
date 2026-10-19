@@ -42,8 +42,33 @@
 </section>
 <% } %>
 
+<% if (r.estado !== 'cancelada') { %>
+<section class="card" style="margin-top:16px">
+  <h2><%= t('pay.title') %></h2>
+  <p><span class="badge <%= { sin_pago: 'est-cancelada', en_revision: 'est-pendiente', confirmado: 'est-completada', rechazado: 'est-rechazada' }[r.pago_estado] %>"><%= t('pay.status.' + r.pago_estado) %></span></p>
+  <% if (r.pago_estado === 'confirmado') { %>
+    <p><%= t('pay.confirmedMsg') %></p>
+  <% } else if (r.pago_estado === 'en_revision') { %>
+    <p class="muted"><%= t('pay.review') %></p>
+    <p><a href="/cliente/reservas/<%= r.id %>/evidencia" target="_blank" rel="noopener"><%= t('pay.viewEvidence') %></a></p>
+  <% } else if (r.estado === 'pendiente') { %>
+    <% if (r.pago_estado === 'rechazado') { %>
+      <p class="error"><%= t('pay.rejectedMsg') %><% if (r.pago_nota) { %> <%= t('pay.reasonLabel') %>: <%= r.pago_nota %><% } %></p>
+    <% } %>
+    <% if (pago.requisitos.ok && pago.nequi.numero) { %>
+      <p><%= t('pay.amount') %>: <strong><%= money(pago.monto, 'COP') %></strong></p>
+      <a class="btn" href="/cliente/reservas/<%= r.id %>/pagar"><%= r.pago_estado === 'rechazado' ? t('pay.resendBtn') : t('pay.payNow') %></a>
+    <% } else { %>
+      <p class="muted"><%= !pago.nequi.numero && pago.requisitos.ok ? t('pay.notConfigured') : t('pay.waitingShort') %></p>
+      <p><a href="/cliente/reservas/<%= r.id %>/pagar"><%= t('pay.seeRequirements') %></a></p>
+    <% } %>
+  <% } %>
+</section>
+<% } %>
+
 <p class="actions">
   <a href="/cliente"><%= t('cli.back') %></a>
+  <% if (!cancelable && ['pendiente', 'confirmada'].includes(r.estado)) { %><span class="muted"><%= t('cli.cancelLocked') %></span><% } %>
   <% if (cancelable && can('reservas.cancelar_propia')) { %>
     <form method="post" action="/cliente/reservas/<%= r.id %>/cancelar" class="inline"
           onsubmit="return confirm(<%= JSON.stringify(t('cli.cancelConfirm')) %>)">

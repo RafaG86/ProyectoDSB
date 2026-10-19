@@ -1,0 +1,81 @@
+<% const titulo = t('pay.title') + ' #' + r.id %>
+<% const clasePago = { sin_pago: 'est-cancelada', en_revision: 'est-pendiente', confirmado: 'est-completada', rechazado: 'est-rechazada' } %>
+<% const numeroNequi = nequi.numero.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1 $2 $3') %>
+<%- include('../partials/header', { titulo }) %>
+<div class="head-row">
+  <h1><%= t('pay.title') %> #<%= r.id %></h1>
+  <span class="badge <%= clasePago[r.pago_estado] %>"><%= t('pay.status.' + r.pago_estado) %></span>
+</div>
+<p class="aviso-sim" role="note"><%= t('pay.sim') %></p>
+<% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+
+<% if (r.pago_estado === 'confirmado') { %>
+  <p class="ok" role="status"><%= t('pay.confirmedMsg') %></p>
+
+<% } else if (r.pago_estado === 'en_revision') { %>
+  <section class="card">
+    <p><%= t('pay.review') %></p>
+    <dl class="detail">
+      <dt><%= t('pay.amount') %></dt><dd><%= money(r.pago_monto_cop, 'COP') %></dd>
+      <dt><%= t('pay.yourNumber') %></dt><dd><%= r.pago_nequi_cliente %></dd>
+      <dt><%= t('pay.reference') %></dt><dd><%= r.pago_referencia %></dd>
+      <dt><%= t('pay.code') %></dt><dd><%= r.pago_codigo %></dd>
+      <dt><%= t('pay.sentOn').replace('{t}', '') %></dt><dd><%= bogota(r.pago_enviado_en) %></dd>
+    </dl>
+    <p><a href="/cliente/reservas/<%= r.id %>/evidencia" target="_blank" rel="noopener"><%= t('pay.viewEvidence') %></a></p>
+  </section>
+
+<% } else if (r.estado !== 'pendiente') { %>
+  <p class="muted"><%= t('pay.closed') %></p>
+
+<% } else if (!requisitos.ok) { %>
+  <section class="card">
+    <p><%= t('pay.waiting') %></p>
+    <ul class="check-list">
+      <li class="<%= requisitos.faltan.includes('quote') ? 'falta' : 'ok' %>"><span aria-hidden="true"><%= requisitos.faltan.includes('quote') ? '✖' : '✔' %></span> <%= t('pay.req.quote') %></li>
+      <li class="<%= requisitos.faltan.includes('driver') ? 'falta' : 'ok' %>"><span aria-hidden="true"><%= requisitos.faltan.includes('driver') ? '✖' : '✔' %></span> <%= t('pay.req.driver') %></li>
+      <% if (r.autorizacion !== 'no_requiere') { %>
+        <li class="<%= requisitos.faltan.includes('auth') ? 'falta' : 'ok' %>"><span aria-hidden="true"><%= requisitos.faltan.includes('auth') ? '✖' : '✔' %></span> <%= t('pay.req.auth') %></li>
+      <% } %>
+      <li class="<%= requisitos.faltan.includes('lead') ? 'falta' : 'ok' %>"><span aria-hidden="true"><%= requisitos.faltan.includes('lead') ? '✖' : '✔' %></span> <%= t('pay.req.lead').replace('{h}', requisitos.horas) %></li>
+    </ul>
+  </section>
+
+<% } else if (!nequi.numero) { %>
+  <p class="error"><%= t('pay.notConfigured') %></p>
+
+<% } else { %>
+  <% if (r.pago_estado === 'rechazado') { %>
+    <section class="card" style="border-color:var(--err)">
+      <p><strong><%= t('pay.rejectedMsg') %></strong></p>
+      <% if (r.pago_nota) { %><p><%= t('pay.reasonLabel') %>: <%= r.pago_nota %></p><% } %>
+      <p class="muted"><%= t('pay.resend') %></p>
+    </section>
+  <% } %>
+
+  <section class="card" style="margin-top:16px">
+    <h2><%= t('pay.step1') %></h2>
+    <dl class="detail">
+      <dt><%= t('pay.company') %></dt><dd><strong class="codigo"><%= numeroNequi %></strong></dd>
+      <% if (nequi.titular) { %><dt><%= t('pay.holder') %></dt><dd><%= nequi.titular %></dd><% } %>
+      <dt><%= t('pay.amount') %></dt><dd><strong class="codigo"><%= money(monto, 'COP') %></strong></dd>
+      <dt><%= t('pay.code') %></dt><dd><strong class="codigo"><%= r.pago_codigo %></strong></dd>
+    </dl>
+    <p class="aviso-sim" role="note"><strong><%= t('pay.fakeNumber') %></strong></p>
+    <% if (r.moneda && r.moneda !== 'COP') { %><p class="muted"><%= t('pay.amountNote').replace('{total}', money(r.total, r.moneda)) %></p><% } %>
+    <p class="muted"><%= t('pay.codeHelp') %></p>
+  </section>
+
+  <form class="form" method="post" action="/cliente/reservas/<%= r.id %>/pagar" enctype="multipart/form-data" style="margin-top:16px; max-width:none">
+    <h2><%= t('pay.step2') %></h2>
+    <input type="hidden" name="monto" value="<%= monto %>">
+    <label><%= t('pay.yourNumber') %> <input type="tel" name="nequi" value="<%= valores.nequi || '' %>" placeholder="300 123 4567" maxlength="30" autocomplete="tel-national" required></label>
+    <label><%= t('pay.reference') %> <input name="referencia" value="<%= valores.referencia || '' %>" maxlength="30" required></label>
+    <label><%= t('pay.evidence') %> <input type="file" name="evidencia" accept="image/jpeg,image/png,image/webp,application/pdf" required></label>
+    <label class="check"><input type="checkbox" name="declaro" value="1" required> <%= t('pay.declare') %></label>
+    <button class="btn"><%= t('pay.send') %></button>
+  </form>
+<% } %>
+
+<p class="actions"><a href="/cliente/reservas/<%= r.id %>"><%= t('pay.back') %></a></p>
+<%- include('../partials/footer') %>

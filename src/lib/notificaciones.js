@@ -26,6 +26,9 @@ const EVENTOS = {
   autorizada:      { destino: 'cliente' },
   rechazada:       { destino: 'cliente' },
   cancelada:       { destino: 'cliente' },
+  pago_enviado:    { destino: 'pagos', urgente: true },        // el cliente subió el comprobante: hay que verificarlo
+  pago_confirmado: { destino: 'cliente' },                     // pago verificado: la reserva quedó confirmada
+  pago_rechazado:  { destino: 'cliente' },                     // el comprobante no se pudo verificar
   prueba:          { destino: 'propio' },
 };
 
@@ -57,6 +60,14 @@ function destinatariosAdmin() {
     SELECT u.id, u.idioma FROM usuarios u JOIN roles r ON r.clave = u.rol
     WHERE u.activo = 1 AND (u.rol = 'admin' OR EXISTS (
       SELECT 1 FROM rol_permisos p WHERE p.rol_id = r.id AND p.permiso = 'reservas.gestionar'))`).all();
+}
+
+// Quien puede verificar pagos (el administrador y los niveles con ese permiso).
+function destinatariosPagos() {
+  return db.prepare(`
+    SELECT u.id, u.idioma FROM usuarios u JOIN roles r ON r.clave = u.rol
+    WHERE u.activo = 1 AND (u.rol = 'admin' OR EXISTS (
+      SELECT 1 FROM rol_permisos p WHERE p.rol_id = r.id AND p.permiso = 'pagos.verificar'))`).all();
 }
 
 // ---- Envío push ----
@@ -99,6 +110,7 @@ function avisar(tipo, reservaId, extra = {}, destinatarios = null) {
   if (!evento || (reservaId && !r)) return 0;
   const lista = destinatarios
     || (evento.destino === 'admin' ? destinatariosAdmin()
+      : evento.destino === 'pagos' ? destinatariosPagos()
       : evento.destino === 'cliente' ? [{ id: r.cliente_id, idioma: r.cliente_idioma }]
       : evento.destino === 'conductor' && r.empleado_id ? [{ id: r.empleado_id, idioma: r.conductor_idioma }] : []);
 
@@ -109,6 +121,7 @@ function avisar(tipo, reservaId, extra = {}, destinatarios = null) {
     const t = traductor(lang);
     const vars = r ? {
       id: r.id, cliente: r.cliente, conductor: r.conductor || '', destino: r.destino_final, fecha: r.fecha, hora: r.hora || '', pax: r.pasajeros,
+      monto: r.pago_monto_cop != null ? formatear(r.pago_monto_cop, 'COP', 0, lang) : '',
       total: r.total != null && divisas[r.moneda] ? formatear(r.total, r.moneda, divisas[r.moneda].decimales, lang) : '',
       ...extra,
     } : { ...extra };
@@ -166,4 +179,24 @@ function revisarAlertas(ahora = Date.now()) {
   return enviadas;
 }
 
-module.exports = { EVENTOS, avisar, enviarPush, revisarAlertas, clavePublica, destinatariosAdmin };
+// La reserva ya no existe: el aviso no lleva a ninguna reserva, solo a la lista del cliente o del conductor.
+function avisarEliminada(snap, motivo) {
+  const lista = [];
+  if (snap.cliente_id) lista.push({ id: snap.cliente_id, idioma: snap.cliente_idioma, url: '/cliente' });
+  if (snap.empleado_id && ['pendiente', 'aceptada'].includes(snap.conductor_estado)) {
+    const c = db.prepare('SELECT idioma FROM usuarios WHERE id = ?').get(snap.empleado_id);
+    lista.push({ id: snap.empleado_id, idioma: c && c.idioma, url: '/empleado' });
+  }
+  const ins = db.prepare('INSERT INTO notificaciones (usuario_id, tipo, titulo, cuerpo, url, reserva_id) VALUES (?,?,?,?,?,NULL)');
+  for (const d of lista) {
+    const t = traductor(idiomaDe(d.idioma));
+    const vars = { id: snap.id, nota: motivo, destino: snap.destino_final, fecha: snap.fecha, hora: snap.hora || '' };
+    const titulo = fmt(t('notif.reserva_eliminada.titulo'), vars);
+    const cuerpo = fmt(t('notif.reserva_eliminada.cuerpo'), vars);
+    ins.run(d.id, 'reserva_eliminada', titulo, cuerpo, d.url);
+    enviarPush(d.id, { titulo, cuerpo, url: d.url, tag: `reserva-${snap.id}`, urgente: false }).catch((e) => console.error('Push:', e.message));
+  }
+  return lista.length;
+}
+
+module.exports = { EVENTOS, avisar, avisarEliminada, enviarPush, revisarAlertas, clavePublica, destinatariosAdmin };

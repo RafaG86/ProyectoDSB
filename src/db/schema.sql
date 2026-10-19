@@ -98,6 +98,18 @@ CREATE TABLE IF NOT EXISTS reservas (
   conductor_respondido_en TEXT,
   conductor_nota TEXT,                                    -- motivo cuando el conductor no puede
   alerta_conductor_en TEXT,                               -- ya se avisó que el conductor no responde
+  -- Pago SIMULADO por Nequi (no mueve dinero). Con el pago confirmado, la reserva queda confirmada.
+  pago_estado    TEXT NOT NULL DEFAULT 'sin_pago' CHECK (pago_estado IN ('sin_pago','en_revision','confirmado','rechazado')),
+  pago_codigo    TEXT,                                    -- código que el cliente escribe en el mensaje de la transferencia
+  pago_monto_cop INTEGER,                                 -- valor en pesos colombianos que debía pagar
+  pago_nequi_cliente TEXT,                                -- número Nequi del cliente (10 dígitos)
+  pago_referencia TEXT,                                   -- referencia del comprobante de Nequi
+  pago_evidencia TEXT,                                    -- archivo guardado en data/evidencias (nombre aleatorio)
+  pago_evidencia_tipo TEXT,
+  pago_hash      TEXT,                                    -- huella del archivo: evita reutilizar el mismo comprobante
+  pago_enviado_en TEXT,
+  pago_revisado_en TEXT,
+  pago_nota      TEXT,                                    -- motivo cuando el administrador rechaza el pago
   CHECK ((tipo = 'tour' AND tour_id IS NOT NULL) OR (tipo = 'especial' AND destino IS NOT NULL))
 );
 
@@ -162,3 +174,17 @@ CREATE TABLE IF NOT EXISTS indisponibilidades (
   CHECK (hasta >= desde)
 );
 CREATE INDEX IF NOT EXISTS idx_indisp_usuario ON indisponibilidades(usuario_id, desde, hasta);
+
+-- Registro de reservas eliminadas: quién, cuándo y por qué. La reserva se borra, pero queda este rastro.
+CREATE TABLE IF NOT EXISTS reservas_eliminadas (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  reserva_id           INTEGER NOT NULL,                  -- número que tenía la reserva (no se reutiliza)
+  cliente_id           INTEGER,
+  cliente_nombre       TEXT,
+  resumen              TEXT NOT NULL,                     -- JSON con los datos principales al momento de eliminarla
+  motivo               TEXT NOT NULL,                     -- justificación escrita por quien la eliminó
+  eliminado_por        INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+  eliminado_por_nombre TEXT,
+  avisado              INTEGER NOT NULL DEFAULT 0,        -- 1 = se avisó al cliente y al conductor
+  eliminado_en         TEXT NOT NULL DEFAULT (datetime('now'))
+);

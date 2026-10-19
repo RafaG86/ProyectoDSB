@@ -15,6 +15,9 @@ const PERMISOS = [
   'ajustes.gestionar',
   'servicios.responder',
   'disponibilidad.gestionar',
+  'pagos.realizar',
+  'pagos.verificar',
+  'reservas.eliminar',
 ];
 
 // Panel (página de inicio) al que entra cada nivel.
@@ -25,7 +28,7 @@ const HOME = { admin: '/admin', empleado: '/empleado', cliente: '/cliente' };
 const ROLES_SISTEMA = [
   { clave: 'admin', nombre: 'Administrador', panel: 'admin', permisos: PERMISOS },
   { clave: 'empleado', nombre: 'Empleado', panel: 'empleado', permisos: ['servicios.ver_asignados', 'servicios.responder', 'disponibilidad.gestionar'] },
-  { clave: 'cliente', nombre: 'Cliente', panel: 'cliente', permisos: ['reservas.crear_propia', 'reservas.ver_propias', 'reservas.cancelar_propia'] },
+  { clave: 'cliente', nombre: 'Cliente', panel: 'cliente', permisos: ['reservas.crear_propia', 'reservas.ver_propias', 'reservas.cancelar_propia', 'pagos.realizar'] },
 ];
 
 module.exports = { PERMISOS, PANELES, HOME, ROLES_SISTEMA };

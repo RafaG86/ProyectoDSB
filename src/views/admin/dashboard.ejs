@@ -8,6 +8,7 @@
   <div class="card stat"><span><%= stats.empleados %></span><%= t('adm.employees') %></div>
   <a class="card stat" href="/admin/reservas?estado=pendiente"><span><%= stats.reservasPendientes %></span><%= t('adm.pending') %></a>
   <div class="card stat"><span><%= stats.vehiculos %></span><%= t('adm.vehicles') %></div>
+  <% if (can('pagos.verificar')) { %><a class="card stat <%= stats.pagosPorVerificar ? 'alerta' : '' %>" href="/admin/reservas?pago=en_revision"><span><%= stats.pagosPorVerificar %></span><%= t('adm.payPending') %></a><% } %>
 </div>
 
 <% if (can('reservas.ver_todas')) { %>

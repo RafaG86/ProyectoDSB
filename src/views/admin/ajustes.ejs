@@ -26,6 +26,11 @@
     <input type="number" name="duracion_defecto_horas" value="<%= valores.duracion_defecto_horas %>" min="<%= limites.duracion_defecto_horas[0] %>" max="<%= limites.duracion_defecto_horas[1] %>" step="1" required>
     <small class="muted"><%= t('aju.durationHint') %></small>
   </label>
+  <fieldset class="perms">
+    <legend><%= t('aju.nequiTitle') %></legend>
+    <label><%= t('aju.nequi') %> <input type="tel" name="nequi_numero" value="<%= nequi.numero %>" placeholder="300 123 4567" maxlength="30"><small class="muted"><%= t('aju.nequiHint') %></small></label>
+    <label><%= t('aju.holder') %> <input name="nequi_titular" value="<%= nequi.titular %>" maxlength="60"></label>
+  </fieldset>
   <button class="btn"><%= t('aju.save') %></button>
 </form>
 <%- include('../partials/footer') %>

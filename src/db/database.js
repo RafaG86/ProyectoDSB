@@ -115,6 +115,14 @@ agregarColumnas('reservas', [
 ]);
 if (!teniaConductor) db.exec("UPDATE reservas SET conductor_estado = 'aceptada' WHERE empleado_id IS NOT NULL");
 
+// Migración 10: pago simulado por Nequi.
+agregarColumnas('reservas', [
+  ['pago_estado', "TEXT NOT NULL DEFAULT 'sin_pago' CHECK (pago_estado IN ('sin_pago','en_revision','confirmado','rechazado'))"],
+  ['pago_codigo', 'TEXT'], ['pago_monto_cop', 'INTEGER'], ['pago_nequi_cliente', 'TEXT'], ['pago_referencia', 'TEXT'],
+  ['pago_evidencia', 'TEXT'], ['pago_evidencia_tipo', 'TEXT'], ['pago_hash', 'TEXT'],
+  ['pago_enviado_en', 'TEXT'], ['pago_revisado_en', 'TEXT'], ['pago_nota', 'TEXT'],
+]);
+
 db.exec("UPDATE reservas SET moneda = 'USD', tarifa_moneda = 'USD', factor = 1 WHERE total IS NOT NULL AND moneda IS NULL");
 
 // Tasas iniciales (ILUSTRATIVAS: el admin las ajusta en Divisas). Solo se cargan si no existen.
@@ -122,6 +130,12 @@ const insDivisa = db.prepare('INSERT OR IGNORE INTO divisas (codigo, nombre, dec
 insDivisa.run('USD', 'Dólar estadounidense', 2, 1);
 insDivisa.run('EUR', 'Euro', 2, 0.92);
 insDivisa.run('COP', 'Peso colombiano', 0, 4000);
+
+// Cuenta Nequi de la empresa: de SIMULACIÓN mientras el pago sea simulado. Solo se carga si nunca se ha configurado
+// (si el administrador la cambia, o la deja vacía a propósito, no se vuelve a poner).
+const insAjuste = db.prepare('INSERT OR IGNORE INTO ajustes (clave, valor) VALUES (?, ?)');
+insAjuste.run('nequi_numero', '3000000000');
+insAjuste.run('nequi_titular', 'DSB Transportes (simulación)');
 
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_reservas_cliente  ON reservas(cliente_id);
@@ -141,6 +155,12 @@ if (db.prepare('PRAGMA user_version').get().user_version < 3) {
   insPerm.run('servicios.responder', 'empleado');
   insPerm.run('disponibilidad.gestionar', 'empleado');
   db.exec('PRAGMA user_version = 3');
+}
+
+// Migración 11 (user_version 4): el nivel Cliente puede pagar sus reservas.
+if (db.prepare('PRAGMA user_version').get().user_version < 4) {
+  insPerm.run('pagos.realizar', 'cliente');
+  db.exec('PRAGMA user_version = 4');
 }
 
 module.exports = db;

@@ -13,7 +13,7 @@
 
 <div class="table-wrap">
 <table>
-  <tr><th><%= t('bk.date') %></th><th><%= t('cli.time') %></th><th><%= t('svc.type') %></th><th><%= t('bk.destination') %></th><th><%= t('bk.pax') %></th><th><%= t('bk.total') %></th><th><%= t('bk.status') %></th><th></th></tr>
+  <tr><th><%= t('bk.date') %></th><th><%= t('cli.time') %></th><th><%= t('svc.type') %></th><th><%= t('bk.destination') %></th><th><%= t('bk.pax') %></th><th><%= t('bk.total') %></th><th><%= t('bk.status') %></th><th><%= t('bk.payment') %></th><th></th></tr>
   <% reservas.forEach(r => { %>
     <tr>
       <td><%= r.fecha %></td>
@@ -23,10 +23,11 @@
       <td><%= r.pasajeros %></td>
       <td><%= r.total == null ? '—' : money(r.total, r.moneda || 'USD') %></td>
       <td><span class="badge est-<%= r.estado %>"><%= t('est.' + r.estado) %></span></td>
+      <td><span class="badge <%= { sin_pago: 'est-cancelada', en_revision: 'est-pendiente', confirmado: 'est-completada', rechazado: 'est-rechazada' }[r.pago_estado] %>"><%= t('pay.status.' + r.pago_estado) %></span></td>
       <td><a href="/cliente/reservas/<%= r.id %>"><%= t('cli.view') %></a></td>
     </tr>
   <% }) %>
-  <% if (!reservas.length) { %><tr><td colspan="8" class="muted"><%= t('cli.none') %></td></tr><% } %>
+  <% if (!reservas.length) { %><tr><td colspan="9" class="muted"><%= t('cli.none') %></td></tr><% } %>
 </table>
 </div>
 <%- include('../partials/footer') %>

@@ -1,0 +1,27 @@
+<% const titulo = t('del.history') %>
+<%- include('../partials/header', { titulo }) %>
+<div class="head-row">
+  <h1><%= t('del.history') %></h1>
+  <a href="/admin/reservas"><%= t('cli.back') %></a>
+</div>
+<p class="muted"><%= t('del.historyHelp') %></p>
+<div class="table-wrap">
+<table>
+  <tr><th><%= t('del.col.when') %></th><th>#</th><th><%= t('bk.client') %></th><th><%= t('svc.type') %></th><th><%= t('bk.date') %></th><th><%= t('del.col.state') %></th><th><%= t('bk.total') %></th><th><%= t('del.col.reason') %></th><th><%= t('del.col.by') %></th></tr>
+  <% filas.forEach(f => { %>
+    <tr>
+      <td><%= bogota(f.eliminado_en) %></td>
+      <td><%= f.reserva_id %></td>
+      <td><%= f.cliente_nombre || '—' %></td>
+      <td><%= f.r.tipo === 'tour' ? f.r.servicio : t('svc.special') + ' → ' + (f.r.destino || '—') %></td>
+      <td><%= f.r.fecha %> <%= f.r.hora || '' %></td>
+      <td><%= t('est.' + f.r.estado) %> · <%= t('pay.status.' + f.r.pago_estado) %><% if (f.avisado) { %><br><small class="muted"><%= t('del.notified') %></small><% } %></td>
+      <td><%= f.r.total == null ? '—' : money(f.r.total, f.r.moneda || 'USD') %></td>
+      <td><%= f.motivo %></td>
+      <td><%= f.eliminado_por_nombre || '—' %></td>
+    </tr>
+  <% }) %>
+  <% if (!filas.length) { %><tr><td colspan="9" class="muted"><%= t('del.historyEmpty') %></td></tr><% } %>
+</table>
+</div>
+<%- include('../partials/footer') %>

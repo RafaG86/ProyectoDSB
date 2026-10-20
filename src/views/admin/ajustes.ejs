@@ -27,6 +27,14 @@
     <small class="muted"><%= t('aju.durationHint') %></small>
   </label>
   <fieldset class="perms">
+    <legend><%= t('aju.landingTitle') %></legend>
+    <label><%= t('aju.whatsapp') %> <input type="tel" name="whatsapp_numero" value="<%= portada.whatsapp_numero %>" placeholder="300 123 4567" maxlength="30"><small class="muted"><%= t('aju.whatsappHint') %></small></label>
+    <label><%= t('aju.hours') %> <input name="horario_atencion" value="<%= portada.horario_atencion %>" maxlength="80"><small class="muted"><%= t('aju.hoursHint') %></small></label>
+    <label><%= t('aju.confHab') %> <input name="conf_habilitacion" value="<%= portada.conf_habilitacion %>" maxlength="60"></label>
+    <label><%= t('aju.confSeg') %> <input name="conf_seguros" value="<%= portada.conf_seguros %>" maxlength="60"></label>
+    <label><%= t('aju.confCal') %> <input name="conf_calificacion" value="<%= portada.conf_calificacion %>" maxlength="60"><small class="muted"><%= t('aju.confHint') %></small></label>
+  </fieldset>
+  <fieldset class="perms">
     <legend><%= t('aju.nequiTitle') %></legend>
     <label><%= t('aju.nequi') %> <input type="tel" name="nequi_numero" value="<%= nequi.numero %>" placeholder="300 123 4567" maxlength="30"><small class="muted"><%= t('aju.nequiHint') %></small></label>
     <label><%= t('aju.holder') %> <input name="nequi_titular" value="<%= nequi.titular %>" maxlength="60"></label>

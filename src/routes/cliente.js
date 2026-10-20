@@ -110,8 +110,18 @@ router.get('/', requirePermission('reservas.ver_propias'), (req, res) => {
 });
 
 // ---- Pedir un servicio ----
+// Datos que trae el buscador de la portada (todos opcionales y validados).
+function valoresIniciales(q) {
+  const v = { tipo: q.tipo === 'especial' ? 'especial' : 'tour', pasajeros: 1 };
+  if (/^\d{1,6}$/.test(String(q.tour_id))) v.tourElegido = String(q.tour_id);
+  const p = Number(q.pasajeros);
+  if (Number.isInteger(p) && p >= 1 && p <= 60) v.pasajeros = p;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(q.fecha))) v.fecha = String(q.fecha);
+  return v;
+}
+
 router.get('/reservar', requirePermission('reservas.crear_propia'), exigirPerfil, (req, res) =>
-  vistaReservar(res, { tipo: 'tour', pasajeros: 1 }, null));
+  vistaReservar(res, valoresIniciales(req.query), null));
 
 router.post('/reservar', requirePermission('reservas.crear_propia'), exigirPerfil, (req, res) => {
   const { valores: v, error } = validarReserva(req.body, req.t, req.divisas);

@@ -8,6 +8,7 @@
   <div class="card stat"><span><%= stats.empleados %></span><%= t('adm.employees') %></div>
   <a class="card stat" href="/admin/reservas?estado=pendiente"><span><%= stats.reservasPendientes %></span><%= t('adm.pending') %></a>
   <div class="card stat"><span><%= stats.vehiculos %></span><%= t('adm.vehicles') %></div>
+  <% if (can('contactos.gestionar')) { %><a class="card stat <%= stats.contactosNuevos ? 'alerta' : '' %>" href="/admin/contactos?estado=nuevo"><span><%= stats.contactosNuevos %></span><%= t('con.statNew') %></a><% } %>
   <% if (can('pagos.verificar')) { %><a class="card stat <%= stats.pagosPorVerificar ? 'alerta' : '' %>" href="/admin/reservas?pago=en_revision"><span><%= stats.pagosPorVerificar %></span><%= t('adm.payPending') %></a><% } %>
 </div>
 
@@ -32,18 +33,21 @@
 <h2 style="margin-top:32px"><%= t('adm.newRequests') %></h2>
 <div class="table-wrap">
 <table>
-  <tr><th>#</th><th><%= t('bk.date') %></th><th><%= t('cli.time') %></th><th><%= t('bk.client') %></th><th><%= t('svc.type') %></th><th><%= t('bk.destination') %></th><th><%= t('bk.pax') %></th><th><%= t('sla.wait') %></th><th><%= t('sla.deadline') %></th><th><%= t('sla.driver') %></th><th></th></tr>
+  <tr><th>#</th><th><%= t('bk.dateTime') %></th><th><%= t('bk.client') %></th><th><%= t('bk.service') %></th><th><%= t('bk.pax') %></th><th><%= t('sla.wait') %></th><th><%= t('sla.deadline') %></th><th><%= t('sla.driver') %></th><th></th></tr>
   <% pendientes.forEach(r => { %>
     <tr>
-      <td><%= r.id %></td><td><%= r.fecha %></td><td><%= r.hora || '—' %></td><td><%= r.cliente %></td>
-      <td><%= r.tipo === 'tour' ? r.tour : t('svc.special') %></td><td><%= r.destino_final %></td><td><%= r.pasajeros %></td>
+      <td><%= r.id %></td>
+      <td class="nowrap"><%= r.fecha %><span class="sub"><%= r.hora || '—' %></span></td>
+      <td><%= r.cliente %></td>
+      <td><strong><%= r.tipo === 'tour' ? r.tour : t('svc.special') %></strong><span class="sub"><%= r.destino_final %></span></td>
+      <td><%= r.pasajeros %></td>
       <td><span class="badge <%= claseResp[r.t.estadoRespuesta] %>"><%= r.t.respondido ? t('sla.answered') : duracion(r.t.espera) %></span></td>
       <td><span class="badge <%= clasePlazo[r.t.estadoPlazo] %>"><%= r.t.restante < 0 ? t('sla.expired') : duracion(r.t.restante) %></span></td>
       <td><span class="badge <%= { pendiente: 'est-pendiente', aceptada: 'est-completada', rechazada: 'est-rechazada', sin_asignar: 'est-cancelada' }[r.conductor_estado] %>"><%= t('cond.' + r.conductor_estado) %></span></td>
-      <td><% if (r.autorizacion === 'pendiente') { %><small class="muted"><%= t('aut.needed') %></small> · <% } %><a href="/admin/reservas/<%= r.id %>"><%= t('bk.manage') %></a></td>
+      <td><% if (r.autorizacion === 'pendiente') { %><small class="muted"><%= t('aut.needed') %></small><br><% } %><a href="/admin/reservas/<%= r.id %>"><%= t('bk.manage') %></a></td>
     </tr>
   <% }) %>
-  <% if (!pendientes.length) { %><tr><td colspan="11" class="muted"><%= t('adm.noRequests') %></td></tr><% } %>
+  <% if (!pendientes.length) { %><tr><td colspan="9" class="muted"><%= t('adm.noRequests') %></td></tr><% } %>
 </table>
 </div>
 <% } %>

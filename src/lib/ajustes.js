@@ -2,7 +2,7 @@
 const db = require('../db/database');
 
 const DEFAULTS = {
-  sla_respuesta_min: 60,   // tiempo objetivo para dar la primera respuesta a una solicitud (minutos)
+  sla_respuesta_min: 30,   // tiempo objetivo para dar la primera respuesta a una solicitud (minutos)
   anticipacion_horas: 24,  // la recogida debe ser al menos N horas después de formalizar (confirmar) la reserva
   alerta_plazo_horas: 3,   // se avisa cuando faltan N horas para el último momento de confirmar
   duracion_defecto_horas: 8, // cuánto dura, para la agenda del conductor, un servicio sin duración conocida (los tours traen la suya)

@@ -24,12 +24,12 @@ for (const [nombre, apellidos, email, pass, rol, telefono] of usuarios) {
 }
 
 const insT = db.prepare(
-  'INSERT INTO tours (nombre, descripcion, destino, duracion_hrs, precio) SELECT ?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM tours WHERE nombre = ?)'
+  "INSERT INTO tours (nombre, descripcion, destino, duracion_hrs, precio, moneda) SELECT ?,?,?,?,?,'COP' WHERE NOT EXISTS (SELECT 1 FROM tours WHERE nombre = ?)"
 );
 const tours = [
-  ['City Tour', 'Recorrido por los puntos emblemáticos de la ciudad.', 'Centro histórico', 4, 25],
-  ['Ruta de la Costa', 'Traslado y paseo por las playas de la región.', 'Costa', 8, 60],
-  ['Aventura en Montaña', 'Excursión con transporte y guía.', 'Sierra', 10, 85],
+  ['City Tour', 'Recorrido por los puntos emblemáticos de la ciudad.', 'Centro histórico', 4, 100000],
+  ['Ruta de la Costa', 'Traslado y paseo por las playas de la región.', 'Costa', 8, 240000],
+  ['Aventura en Montaña', 'Excursión con transporte y guía.', 'Sierra', 10, 340000],
 ];
 for (const t of tours) insT.run(...t, t[0]);
 

@@ -12,6 +12,10 @@ require('./db/database'); // inicializa el esquema
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Detrás de un proxy (Nginx, un hosting, un túnel) la IP real del visitante viene en una cabecera. TRUST_PROXY=1 le dice a la
+// app que confíe en ella; sin eso, el límite anti-spam del formulario vería a todos los visitantes como una sola persona.
+if (process.env.TRUST_PROXY) app.set('trust proxy', /^\d+$/.test(process.env.TRUST_PROXY) ? Number(process.env.TRUST_PROXY) : process.env.TRUST_PROXY);
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 

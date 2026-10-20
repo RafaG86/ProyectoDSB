@@ -188,3 +188,18 @@ CREATE TABLE IF NOT EXISTS reservas_eliminadas (
   avisado              INTEGER NOT NULL DEFAULT 0,        -- 1 = se avisó al cliente y al conductor
   eliminado_en         TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Personas que piden una cotización desde la página principal (sin cuenta). El equipo las contacta y las marca como atendidas.
+CREATE TABLE IF NOT EXISTS contactos (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre       TEXT NOT NULL,
+  contacto     TEXT NOT NULL,                              -- teléfono/WhatsApp en formato E.164
+  tipo         TEXT NOT NULL CHECK (tipo IN ('turismo','traslado','empresa')),
+  mensaje      TEXT,
+  idioma       TEXT,
+  estado       TEXT NOT NULL DEFAULT 'nuevo' CHECK (estado IN ('nuevo','atendido')),
+  creado_en    TEXT NOT NULL DEFAULT (datetime('now')),
+  atendido_en  TEXT,
+  atendido_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_contactos_estado ON contactos(estado, id);

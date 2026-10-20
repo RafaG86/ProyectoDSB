@@ -9,6 +9,7 @@
   </select>
   <button class="btn"><%= t('roles.create') %></button>
 </form>
+<div class="table-wrap">
 <table>
   <tr><th><%= t('roles.name') %></th><th><%= t('roles.panel') %></th><th><%= t('roles.users') %></th><th><%= t('roles.perms') %></th><th></th></tr>
   <% roles.forEach(r => { %>
@@ -26,4 +27,5 @@
     </tr>
   <% }) %>
 </table>
+</div>
 <%- include('../partials/footer') %>

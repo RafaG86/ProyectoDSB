@@ -1,0 +1,25 @@
+<%# Ilustración vectorial (NO es una foto) de un vehículo. Uso: include('partials/vehiculo', { tipo: 'auto' | 'van' | 'bus', etiqueta: '...' })
+    Los colores salen de las variables del tema, así que se ve bien en claro y en oscuro. %>
+<svg class="veh" viewBox="0 0 240 110" role="img" aria-label="<%= etiqueta %>" xmlns="http://www.w3.org/2000/svg">
+  <ellipse class="veh-sombra" cx="120" cy="102" rx="106" ry="6"/>
+  <% if (tipo === 'auto') { %>
+    <path class="veh-body" d="M14 80 V63 Q14 55 24 53 L62 47 L86 25 Q90 21 97 21 H150 Q158 21 163 26 L188 47 L218 53 Q228 55 228 64 V80 Q228 86 222 86 H18 Q14 86 14 80 Z"/>
+    <path class="veh-glass" d="M72 47 L90 29 H119 V47 Z"/>
+    <path class="veh-glass" d="M127 47 V29 H149 Q152 29 154 31 L176 47 Z"/>
+    <circle class="veh-wheel" cx="62" cy="86" r="17"/><circle class="veh-hub" cx="62" cy="86" r="7"/>
+    <circle class="veh-wheel" cx="180" cy="86" r="17"/><circle class="veh-hub" cx="180" cy="86" r="7"/>
+  <% } else if (tipo === 'van') { %>
+    <path class="veh-body" d="M12 84 V32 Q12 22 24 22 H168 Q178 22 184 30 L214 56 Q226 62 226 74 V84 Q226 88 222 88 H16 Q12 88 12 84 Z"/>
+    <rect class="veh-glass" x="26" y="32" width="38" height="24" rx="3"/><rect class="veh-glass" x="72" y="32" width="38" height="24" rx="3"/><rect class="veh-glass" x="118" y="32" width="38" height="24" rx="3"/>
+    <path class="veh-glass" d="M168 32 L204 56 H168 Z"/>
+    <circle class="veh-wheel" cx="62" cy="88" r="17"/><circle class="veh-hub" cx="62" cy="88" r="7"/>
+    <circle class="veh-wheel" cx="182" cy="88" r="17"/><circle class="veh-hub" cx="182" cy="88" r="7"/>
+  <% } else { %>
+    <path class="veh-body" d="M6 86 V26 Q6 14 20 14 H214 Q234 14 234 36 V86 Q234 90 230 90 H10 Q6 90 6 86 Z"/>
+    <% for (let i = 0; i < 6; i++) { %><rect class="veh-glass" x="<%= 18 + i * 28 %>" y="26" width="22" height="26" rx="3"/><% } %>
+    <rect class="veh-glass" x="190" y="26" width="38" height="30" rx="3"/>
+    <rect class="veh-glass" x="186" y="60" width="18" height="26" rx="2"/>
+    <circle class="veh-wheel" cx="58" cy="90" r="17"/><circle class="veh-hub" cx="58" cy="90" r="7"/>
+    <circle class="veh-wheel" cx="180" cy="90" r="17"/><circle class="veh-hub" cx="180" cy="90" r="7"/>
+  <% } %>
+</svg>

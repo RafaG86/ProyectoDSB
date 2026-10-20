@@ -8,7 +8,7 @@
   // ---- Número de avisos sin leer (también en el ícono de la app instalada) ----
   var badge = document.getElementById('notif-badge');
   function pintar(n) {
-    if (badge) { badge.textContent = n; badge.hidden = !n; }
+    if (badge) { badge.textContent = n > 99 ? '99+' : n; badge.hidden = !n; }
     try { if (n && navigator.setAppBadge) navigator.setAppBadge(n); else if (navigator.clearAppBadge) navigator.clearAppBadge(); } catch (e) {}
   }
   function refrescar() {

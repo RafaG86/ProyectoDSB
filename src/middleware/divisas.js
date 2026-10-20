@@ -3,9 +3,9 @@ const { ORDEN, obtenerDivisas, convertir } = require('../lib/divisas');
 const { formatear, LOCALES } = require('../lib/dinero');
 
 const COOKIE = 'divisa';
-const DEFAULT = 'USD';
+const DEFAULT = 'COP'; // la empresa opera en Colombia: los precios se muestran en pesos salvo que la persona elija otra moneda
 
-// Moneda en que cada visitante quiere ver los precios de lista: cookie elegida > USD.
+// Moneda en que cada visitante quiere ver los precios de lista: cookie elegida > COP.
 // Deja en las vistas: money(), aprox(), precioLista(), divisaVista, listaDivisas y divisas.
 // Debe ir DESPUÉS del middleware de idiomas (usa res.locals.lang).
 function middleware(req, res, next) {

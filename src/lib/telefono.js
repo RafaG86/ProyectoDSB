@@ -12,10 +12,11 @@ function idiomaDePais(pais) {
 }
 
 // Devuelve { e164, internacional, pais, idioma } o null si no es un número válido con indicativo (+).
-function analizar(entrada) {
+// Sin `paisPorDefecto` exige el indicativo (+); con él (p. ej. 'CO') también acepta números nacionales como "300 123 4567".
+function analizar(entrada, paisPorDefecto) {
   const crudo = String(entrada ?? '').trim();
-  if (!crudo.startsWith('+')) return null;
-  const tel = parsePhoneNumberFromString(crudo);
+  if (!crudo.startsWith('+') && !paisPorDefecto) return null;
+  const tel = parsePhoneNumberFromString(crudo, crudo.startsWith('+') ? undefined : paisPorDefecto);
   if (!tel || !tel.isValid()) return null;
   const pais = tel.country || null;
   return { e164: tel.number, internacional: tel.formatInternational(), pais, idioma: idiomaDePais(pais) };

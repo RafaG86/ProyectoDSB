@@ -20,7 +20,7 @@
 <%
   const ruta = currentPath.split('?')[0];
   const cur = (href) => ((['/admin', '/cliente', '/empleado'].includes(href) ? ruta === href : ruta === href || ruta.startsWith(href + '/')) ? ' aria-current="page"' : '');
-  const grupoAdmin = can('panel.admin') || can('reservas.ver_todas') || can('usuarios.gestionar') || can('tarifas.gestionar') || can('divisas.gestionar') || can('ajustes.gestionar') || can('roles.gestionar');
+  const grupoAdmin = can('panel.admin') || can('reservas.ver_todas') || can('usuarios.gestionar') || can('tarifas.gestionar') || can('divisas.gestionar') || can('ajustes.gestionar') || can('roles.gestionar') || can('contactos.gestionar');
   // Quien entra por el panel de administración tiene todos los permisos, pero no necesita las secciones de conductor ni de cliente.
   const grupoConductor = user && user.panel !== 'admin' && (can('servicios.ver_asignados') || can('disponibilidad.gestionar'));
   const grupoCliente = user && user.panel !== 'admin' && (can('reservas.ver_propias') || can('reservas.crear_propia'));
@@ -31,7 +31,7 @@
     <% if (!user) { %><a class="btn" href="/login"><%= t('nav.login') %></a><% } %>
     <% if (user) { %>
       <a class="bell" href="/notificaciones" aria-label="<%= t('notif.title') %>" title="<%= t('notif.title') %>">
-        <span aria-hidden="true">🔔</span><span class="count" id="notif-badge" <%= sinLeer ? '' : 'hidden' %>><%= sinLeer %></span>
+        <span aria-hidden="true">🔔</span><span class="count" id="notif-badge" <%= sinLeer ? '' : 'hidden' %>><%= sinLeer > 99 ? '99+' : sinLeer %></span>
       </a>
     <% } %>
     <%# Un solo menú general: todas las opciones se despliegan aquí (funciona incluso sin JavaScript) %>
@@ -45,6 +45,7 @@
             <p class="menu-title"><%= t('menu.admin') %></p>
             <% if (can('panel.admin')) { %><a href="/admin"<%- cur('/admin') %>><%= t('nav.panel') %></a><% } %>
             <% if (can('reservas.ver_todas')) { %><a href="/admin/reservas"<%- cur('/admin/reservas') %>><%= t('nav.bookings') %></a><% } %>
+            <% if (can('contactos.gestionar')) { %><a href="/admin/contactos"<%- cur('/admin/contactos') %>><%= t('nav.contacts') %></a><% } %>
             <% if (can('usuarios.gestionar')) { %><a href="/admin/usuarios"<%- cur('/admin/usuarios') %>><%= t('nav.users') %></a><% } %>
             <% if (can('tarifas.gestionar')) { %><a href="/admin/tarifas"<%- cur('/admin/tarifas') %>><%= t('nav.tariffs') %></a><% } %>
             <% if (can('divisas.gestionar')) { %><a href="/admin/divisas"<%- cur('/admin/divisas') %>><%= t('nav.currencies') %></a><% } %>

@@ -1,0 +1,36 @@
+<% const titulo = t('con.title') %>
+<%- include('../partials/header', { titulo }) %>
+<h1><%= t('con.title') %></h1>
+<p class="muted"><%= t('con.help') %></p>
+<nav class="filters" aria-label="<%= t('bk.status') %>">
+  <a href="/admin/contactos" class="<%= !filtro ? 'active' : '' %>"><%= t('bk.filterAll') %></a>
+  <a href="/admin/contactos?estado=nuevo" class="<%= filtro === 'nuevo' ? 'active' : '' %>"><%= t('con.filter.new') %></a>
+  <a href="/admin/contactos?estado=atendido" class="<%= filtro === 'atendido' ? 'active' : '' %>"><%= t('con.filter.done') %></a>
+</nav>
+<div class="table-wrap">
+<table>
+  <tr><th><%= t('con.col.when') %></th><th><%= t('con.col.name') %></th><th><%= t('con.col.contact') %></th><th><%= t('con.col.type') %></th><th><%= t('con.col.msg') %></th><th><%= t('bk.status') %></th></tr>
+  <% filas.forEach(f => { %>
+    <tr>
+      <td class="nowrap"><%= bogota(f.creado_en) %><% if (f.estado === 'nuevo') { %><span class="sub"><%= t('con.waiting').replace('{t}', duracion(Date.now() - utcMs(f.creado_en))) %></span><% } %></td>
+      <td><%= f.nombre %></td>
+      <td>
+        <span class="nowrap"><%= f.tel ? f.tel.internacional : f.contacto %></span>
+        <span class="sub"><a href="https://wa.me/<%= f.contacto.replace('+', '') %>" target="_blank" rel="noopener"><%= t('con.wa') %></a> · <a href="tel:<%= f.contacto %>"><%= t('con.call') %></a></span>
+      </td>
+      <td><%= t('land.type.' + f.tipo) %></td>
+      <td><%= f.mensaje || '—' %></td>
+      <td>
+        <% if (f.estado === 'nuevo') { %>
+          <form method="post" action="/admin/contactos/<%= f.id %>/atender" class="inline"><button class="btn"><%= t('con.mark') %></button></form>
+        <% } else { %>
+          <span class="badge est-completada"><%= t('con.done') %></span>
+          <span class="sub"><%= f.atendido_por_nombre || '' %> · <%= bogota(f.atendido_en) %></span>
+        <% } %>
+      </td>
+    </tr>
+  <% }) %>
+  <% if (!filas.length) { %><tr><td colspan="6" class="muted"><%= t('con.empty') %></td></tr><% } %>
+</table>
+</div>
+<%- include('../partials/footer') %>

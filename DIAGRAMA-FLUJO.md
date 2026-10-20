@@ -11,6 +11,11 @@ Lo que aún **no** está construido aparece en gris y con borde punteado (secci�
 ```mermaid
 flowchart TD
     V([Visitante]) --> L[Landing page<br/>tours, contacto]
+    L --> BU[Buscador: tour, traslado o empresa<br/>lleva a reservar con lo elegido]
+    BU --> REG
+    L --> CF[Formulario corto de cotización<br/>sin necesidad de cuenta]
+    CF --> CW[(Contacto web)]
+    CW --> CA[Aviso al equipo y lista de Contactos web<br/>se contacta por WhatsApp o teléfono]
     L --> REG[Registro público<br/>nombre, apellidos, correo y teléfono internacional]
     L --> LOGIN[Ingresar<br/>correo y contraseña]
     REG -->|siempre crea un cliente<br/>el indicativo del teléfono da país e idioma| LOGIN

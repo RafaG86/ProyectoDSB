@@ -163,4 +163,12 @@ if (db.prepare('PRAGMA user_version').get().user_version < 4) {
   db.exec('PRAGMA user_version = 4');
 }
 
+// Migración 12 (user_version 5): los precios de los tours son en pesos (COP 100.000 / 240.000 / 340.000). Estaban cargados como
+// dólares de ejemplo (25 / 60 / 85 USD, el mismo valor real); solo se cambian si siguen con esos valores de ejemplo.
+if (db.prepare('PRAGMA user_version').get().user_version < 5) {
+  const aCop = db.prepare("UPDATE tours SET precio = ?, moneda = 'COP' WHERE nombre = ? AND precio = ? AND moneda = 'USD'");
+  aCop.run(100000, 'City Tour', 25); aCop.run(240000, 'Ruta de la Costa', 60); aCop.run(340000, 'Aventura en Montaña', 85);
+  db.exec('PRAGMA user_version = 5');
+}
+
 module.exports = db;

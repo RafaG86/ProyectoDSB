@@ -31,6 +31,7 @@ Usuarios de demostración (**cámbialos antes de publicar**):
 | `SESSION_SECRET` | Secreto de las sesiones. **Obligatorio cambiarlo en producción.** |
 | `VAPID_SUBJECT` | Correo de contacto de la empresa para las notificaciones push, con formato `mailto:correo@dominio.com`. |
 | `DB_PATH` | Ruta de otra base de datos (útil para pruebas). |
+| `TRUST_PROXY` | Pon `1` si publicas la app detrás de un proxy o hosting: así el límite anti-spam del formulario de la portada distingue a cada visitante. |
 
 ## Notas importantes
 

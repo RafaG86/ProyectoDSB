@@ -63,6 +63,7 @@ router.get('/', requirePermission('panel.admin'), (req, res) => {
     empleados: count("SELECT COUNT(*) n FROM usuarios u JOIN roles r ON r.clave = u.rol WHERE r.panel = 'empleado'"),
     reservasPendientes: count("SELECT COUNT(*) n FROM reservas WHERE estado='pendiente'"),
     pagosPorVerificar: count("SELECT COUNT(*) n FROM reservas WHERE pago_estado='en_revision'"),
+    contactosNuevos: count("SELECT COUNT(*) n FROM contactos WHERE estado='nuevo'"),
     vehiculos: count('SELECT COUNT(*) n FROM vehiculos'),
   };
   const pendientes = db.prepare(`
@@ -425,10 +426,30 @@ router.post('/reservas/:id/autorizacion', gestionarReservas, (req, res) => {
   res.redirect(`/admin/reservas/${r.id}?ok=autorizacion`);
 });
 
+// ---- Contactos de la página principal ----
+const atenderContactos = requirePermission('contactos.gestionar');
+
+router.get('/contactos', atenderContactos, (req, res) => {
+  const filtro = ['nuevo', 'atendido'].includes(req.query.estado) ? req.query.estado : null;
+  const filas = db.prepare(`
+    SELECT c.*, ${nombreCompleto('u')} AS atendido_por_nombre FROM contactos c LEFT JOIN usuarios u ON u.id = c.atendido_por
+    ${filtro ? 'WHERE c.estado = ?' : ''} ORDER BY (c.estado = 'nuevo') DESC, c.id DESC LIMIT 200`).all(...(filtro ? [filtro] : []));
+  res.render('admin/contactos', { filas: filas.map((f) => ({ ...f, tel: analizar(f.contacto) })), filtro });
+});
+
+router.post('/contactos/:id/atender', atenderContactos, (req, res) => {
+  db.prepare("UPDATE contactos SET estado = 'atendido', atendido_en = datetime('now'), atendido_por = ? WHERE id = ? AND estado = 'nuevo'")
+    .run(req.session.user.id, req.params.id);
+  res.redirect('/admin/contactos?estado=nuevo');
+});
+
 // ---- Ajustes de atención (tiempos objetivo y anticipación) ----
 const gestionarAjustes = requirePermission('ajustes.gestionar');
 const vistaAjustes = (req, res, { error = null, ok = null } = {}, status = 200) =>
-  res.status(status).render('admin/ajustes', { valores: ajustes.todos(), limites: ajustes.LIMITES, nequi: pagos.nequiEmpresa(), error, ok });
+  res.status(status).render('admin/ajustes', {
+    valores: ajustes.todos(), limites: ajustes.LIMITES, nequi: pagos.nequiEmpresa(), error, ok,
+    portada: Object.fromEntries(['whatsapp_numero', 'horario_atencion', 'conf_habilitacion', 'conf_seguros', 'conf_calificacion'].map((k) => [k, ajustes.leerTexto(k) || ''])),
+  });
 
 router.get('/ajustes', gestionarAjustes, (req, res) => vistaAjustes(req, res, { ok: req.query.ok === '1' ? req.t('aju.ok') : null }));
 
@@ -443,7 +464,15 @@ router.post('/ajustes', gestionarAjustes, (req, res) => {
   const numeroCrudo = String(req.body.nequi_numero ?? '').trim();
   const nequi = numeroCrudo ? pagos.nequiValido(numeroCrudo) : '';
   if (numeroCrudo && !nequi) return vistaAjustes(req, res, { error: req.t('aju.errNequi') }, 400);
+  // Datos públicos de la portada: solo se muestra lo que se escriba aquí.
+  const waCrudo = String(req.body.whatsapp_numero ?? '').trim();
+  const wa = waCrudo ? analizar(waCrudo, 'CO') : null;
+  if (waCrudo && !wa) return vistaAjustes(req, res, { error: req.t('aju.errWhatsapp') }, 400);
+  const txt = (k, max) => String(req.body[k] ?? '').trim().replace(/\s+/g, ' ').slice(0, max);
   for (const [clave, n] of Object.entries(nuevos)) ajustes.guardar(clave, n);
+  ajustes.guardar('whatsapp_numero', wa ? wa.e164 : '');
+  ajustes.guardar('horario_atencion', txt('horario_atencion', 80));
+  for (const k of ['conf_habilitacion', 'conf_seguros', 'conf_calificacion']) ajustes.guardar(k, txt(k, 60));
   ajustes.guardar('nequi_numero', nequi);
   ajustes.guardar('nequi_titular', String(req.body.nequi_titular ?? '').trim().replace(/\s+/g, ' ').slice(0, 60));
   res.redirect('/admin/ajustes?ok=1');

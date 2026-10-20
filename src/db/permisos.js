@@ -18,6 +18,7 @@ const PERMISOS = [
   'pagos.realizar',
   'pagos.verificar',
   'reservas.eliminar',
+  'contactos.gestionar',
 ];
 
 // Panel (página de inicio) al que entra cada nivel.

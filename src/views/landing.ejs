@@ -1,27 +1,152 @@
-<%- include('partials/header') %>
-<section class="hero">
-  <%- include('partials/logo', { cls: 'logo-hero' }) %>
-  <h1><%= t('hero.title') %></h1>
-  <p><%= t('hero.sub') %></p>
-  <a class="btn" href="/registro"><%= t('hero.cta') %></a>
+<%- include('partials/header', { titulo: t('land.hero.title') }) %>
+<% const horario = pub.horario || t('land.hoursDefault') %>
+<% const waTexto = encodeURIComponent(t('land.wa.text')) %>
+
+<%# ============ HERO + BUSCADOR ============ %>
+<section class="hero2">
+  <div class="hero2-texto">
+    <h1><%= t('land.hero.title') %></h1>
+    <p class="hero2-sub"><%= t('land.hero.sub') %></p>
+    <% if (pub.whatsapp) { %>
+      <a class="btn-wa" href="https://wa.me/<%= pub.whatsapp.digitos %>?text=<%= waTexto %>" target="_blank" rel="noopener"><%- include('partials/icono-wa') %> <%= t('land.wa.cta') %></a>
+    <% } %>
+  </div>
+
+  <form class="widget" id="widget" action="/reservar" method="get"
+        data-note-tour="<%= t('land.w.noteTour') %>" data-note-transfer="<%= t('land.w.noteTransfer') %>" data-note-company="<%= t('land.w.noteCompany') %>"
+        data-go="<%= t('land.w.go') %>" data-go-company="<%= t('land.w.goCompany') %>">
+    <h2><%= t('land.w.title') %></h2>
+    <label><%= t('land.w.need') %>
+      <select name="servicio" id="w-servicio">
+        <optgroup label="<%= t('land.w.tours') %>">
+          <% tours.forEach(tour => { %><option value="tour:<%= tour.id %>" data-precio="<%= precioLista(tour.precio, tour.moneda) %>"><%= tour.nombre %></option><% }) %>
+        </optgroup>
+        <option value="traslado"><%= t('land.w.transfer') %></option>
+        <option value="empresa"><%= t('land.w.company') %></option>
+      </select>
+    </label>
+    <div class="widget-fila" id="w-detalles">
+      <label><%= t('land.w.pax') %> <input type="number" name="pax" min="1" max="60" value="2" inputmode="numeric"></label>
+      <label><%= t('land.w.date') %> <input type="date" name="fecha" min="<%= minFecha %>"></label>
+    </div>
+    <p class="widget-nota" id="w-nota" aria-live="polite"></p>
+    <button class="btn widget-btn" id="w-boton"><%= t('land.w.go') %></button>
+    <p class="muted widget-micro"><%= t('land.w.micro').replace('{h}', horas) %></p>
+  </form>
 </section>
 
-<section id="tours">
-  <h2><%= t('tours.title') %></h2>
+<%# ============ BARRA DE CONFIANZA: solo hechos del proceso real + lo que el admin configure ============ %>
+<section class="confianza" aria-label="<%= t('land.trust.label') %>">
+  <ul>
+    <li><span aria-hidden="true">📍</span> <%= t('land.trust.origin') %></li>
+    <li><span aria-hidden="true">✅</span> <%= t('land.trust.driver') %></li>
+    <li><span aria-hidden="true">🧾</span> <%= t('land.trust.clear') %></li>
+    <li><span aria-hidden="true">⏱️</span> <%= t('land.trust.fast') %></li>
+    <% pub.confianza.forEach(c => { %><li><span aria-hidden="true"><%= c.icono %></span> <%= c.texto %></li><% }) %>
+  </ul>
+</section>
+
+<%# ============ CÓMO FUNCIONA ============ %>
+<section class="seccion" id="como">
+  <h2><%= t('land.how.title') %></h2>
+  <ol class="pasos">
+    <% [1, 2, 3].forEach(n => { %>
+      <li><span class="paso-n" aria-hidden="true"><%= n %></span>
+        <h3><%= t('land.how.' + n + '.t') %></h3>
+        <p><%= t('land.how.' + n + '.d') %></p></li>
+    <% }) %>
+  </ol>
+</section>
+
+<%# ============ TOURS ============ %>
+<section class="seccion" id="tours">
+  <h2><%= t('land.tours.title') %></h2>
+  <p class="seccion-sub"><%= t('land.tours.sub') %></p>
   <div class="grid">
     <% tours.forEach(tour => { %>
-      <article class="card">
+      <article class="card tour">
+        <p class="tour-dur"><%= tour.duracion_hrs %> <%= t('tours.hours') %></p>
         <h3><%= tour.nombre %></h3>
         <p><%= tour.descripcion %></p>
-        <p class="muted"><%= tour.destino %> · <%= tour.duracion_hrs %> <%= t('tours.hours') %></p>
-        <p class="price"><%= precioLista(tour.precio, tour.moneda) %></p>
+        <p class="chips"><span><%= t('land.tours.chipOrigin') %></span><span><%= t('land.tours.chipDriver') %></span><span><%= tour.destino %></span></p>
+        <p class="tour-precio"><small><%= t('land.tours.from') %></small> <strong><%= precioLista(tour.precio, tour.moneda) %></strong></p>
+        <a class="btn" href="/reservar?servicio=tour:<%= tour.id %>"><%= t('land.tours.book') %></a>
       </article>
     <% }) %>
   </div>
 </section>
 
-<section>
-  <h2><%= t('contact.title') %></h2>
-  <p><%= t('contact.text') %></p>
+<%# ============ FLOTA (ilustraciones, no fotos) ============ %>
+<section class="seccion" id="flota">
+  <h2><%= t('land.fleet.title') %></h2>
+  <p class="seccion-sub"><%= t('land.fleet.sub') %></p>
+  <div class="grid">
+    <% [['auto', 'car'], ['van', 'van'], ['bus', 'bus']].forEach(([tipo, k]) => { %>
+      <article class="card flota-card">
+        <%- include('partials/vehiculo', { tipo, etiqueta: t('land.fleet.' + k) }) %>
+        <h3><%= t('land.fleet.' + k) %></h3>
+        <p class="flota-cap"><%= t('land.fleet.' + k + 'Cap') %></p>
+        <p><%= t('land.fleet.' + k + 'Desc') %></p>
+      </article>
+    <% }) %>
+  </div>
+  <p class="muted fleet-note"><%= t('land.fleet.note') %></p>
 </section>
+
+<%# ============ CORPORATIVO ============ %>
+<section class="corporativo" id="empresas">
+  <div>
+    <h2><%= t('land.corp.title') %></h2>
+    <p><%= t('land.corp.sub') %></p>
+    <ul>
+      <li><%= t('land.corp.1') %></li><li><%= t('land.corp.2') %></li><li><%= t('land.corp.3') %></li>
+    </ul>
+  </div>
+  <a class="btn-claro" href="/?tipo=empresa#cotizar"><%= t('land.corp.cta') %></a>
+</section>
+
+<%# ============ COTIZACIÓN RÁPIDA ============ %>
+<section class="seccion cotizar" id="cotizar">
+  <div>
+    <h2><%= t('land.form.title') %></h2>
+    <p class="seccion-sub"><%= t('land.form.sub') %></p>
+    <p class="muted"><%= t('land.form.resp').replace('{horario}', horario) %></p>
+  </div>
+  <form class="form-contacto" method="post" action="/contacto">
+    <% if (ok) { %><p class="ok" role="status"><%= t('land.form.ok') %></p><% } %>
+    <% if (error) { %><p class="error" role="alert" id="contacto-error"><%= error %></p><% } %>
+    <input type="text" name="web" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <label><%= t('land.form.name') %> <input name="nombre" value="<%= valores.nombre || '' %>" maxlength="80" autocomplete="name" required></label>
+    <label><%= t('land.form.contact') %> <input type="tel" name="contacto" value="<%= valores.contacto || '' %>" placeholder="300 123 4567" maxlength="30" autocomplete="tel" required></label>
+    <label><%= t('land.form.type') %>
+      <select name="tipo">
+        <% ['turismo', 'traslado', 'empresa'].forEach(k => { %><option value="<%= k %>" <%= tipoPre === k ? 'selected' : '' %>><%= t('land.type.' + k) %></option><% }) %>
+      </select>
+    </label>
+    <label><%= t('land.form.msg') %> <input name="mensaje" value="<%= valores.mensaje || '' %>" maxlength="300"></label>
+    <button class="btn"><%= t('land.form.send') %></button>
+  </form>
+</section>
+
+<% if (pub.whatsapp) { %>
+  <a class="wa-flotante" href="https://wa.me/<%= pub.whatsapp.digitos %>?text=<%= waTexto %>" target="_blank" rel="noopener" aria-label="<%= t('land.wa.label') %>" title="<%= t('land.wa.label') %>"><%- include('partials/icono-wa') %></a>
+<% } %>
+
+<script>
+  (function () {
+    var f = document.getElementById('widget'), sel = document.getElementById('w-servicio'),
+        nota = document.getElementById('w-nota'), det = document.getElementById('w-detalles'), btn = document.getElementById('w-boton');
+    function pintar() {
+      var v = sel.value, op = sel.selectedOptions[0];
+      var empresa = v === 'empresa';
+      det.hidden = empresa;
+      btn.textContent = empresa ? f.dataset.goCompany : f.dataset.go;
+      nota.textContent = v.indexOf('tour:') === 0 ? f.dataset.noteTour.replace('{precio}', op.dataset.precio)
+        : v === 'traslado' ? f.dataset.noteTransfer : f.dataset.noteCompany;
+    }
+    sel.addEventListener('change', pintar); pintar();
+    var err = document.getElementById('contacto-error');
+    if (err) document.getElementById('cotizar').scrollIntoView();
+  })();
+</script>
 <%- include('partials/footer') %>

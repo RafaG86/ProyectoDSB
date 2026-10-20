@@ -11,22 +11,24 @@
 <% } %>
 <div class="table-wrap">
 <table>
-  <tr><th><%= t('bk.date') %></th><th><%= t('cli.time') %></th><th><%= t('svc.type') %></th><th><%= t('cli.pickup') %></th><th><%= t('bk.destination') %></th><th><%= t('bk.client') %></th><th><%= t('bk.pax') %></th><th><%= t('emp.special') %></th><th><%= t('drv.yourAnswer') %></th><th></th></tr>
+  <tr><th><%= t('bk.dateTime') %></th><th><%= t('bk.service') %></th><th><%= t('cli.pickup') %></th><th><%= t('bk.client') %></th><th><%= t('bk.pax') %></th><th><%= t('emp.special') %></th><th><%= t('drv.yourAnswer') %></th><th></th></tr>
   <% asignadas.forEach(r => { %>
     <tr class="<%= r.conductor_estado === 'pendiente' ? 'fila-pendiente' : '' %>">
-      <td><%= r.fecha %></td><td><%= r.hora || '—' %></td>
-      <td><%= r.tipo === 'tour' ? r.tour : t('svc.special') %></td>
-      <td><%= r.punto_recogida || '—' %></td><td><%= r.destino_final %></td>
+      <td class="nowrap"><%= r.fecha %><span class="sub"><%= r.hora || '—' %></span></td>
+      <td><strong><%= r.tipo === 'tour' ? r.tour : t('svc.special') %></strong><span class="sub"><%= r.destino_final %></span></td>
+      <td><%= r.punto_recogida || '—' %></td>
       <td><%= r.cliente %></td><td><%= r.pasajeros %></td>
       <td><% if (r.lleva_mascotas) { %><%= t('cli.hasPets') %>: <%= r.mascotas_detalle %><br><% } %><% if (r.lleva_ninos) { %><%= t('cli.hasKids') %>: <%= r.ninos_detalle %><% } %><% if (!r.lleva_mascotas && !r.lleva_ninos) { %>—<% } %></td>
       <td>
-        <span class="badge <%= clase[r.conductor_estado] %>"><%= t('drv.' + r.conductor_estado) %></span>
-        <% if (r.estado === 'confirmada') { %><br><small class="muted"><%= t('est.confirmada') %></small><% } %>
+        <div class="stack">
+          <span class="badge <%= clase[r.conductor_estado] %>"><%= t('drv.' + r.conductor_estado) %></span>
+          <% if (r.estado === 'confirmada') { %><small class="muted"><%= t('est.confirmada') %></small><% } %>
+        </div>
       </td>
       <td><a href="/empleado/reservas/<%= r.id %>"><%= r.conductor_estado === 'pendiente' ? t('drv.review') : t('cli.view') %></a></td>
     </tr>
   <% }) %>
-  <% if (!asignadas.length) { %><tr><td colspan="10" class="muted"><%= t('emp.none') %></td></tr><% } %>
+  <% if (!asignadas.length) { %><tr><td colspan="8" class="muted"><%= t('emp.none') %></td></tr><% } %>
 </table>
 </div>
 <%- include('../partials/footer') %>
